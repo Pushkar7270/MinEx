@@ -1,0 +1,2 @@
+# MinEx
+HACKATHON PROJECT
