@@ -20,8 +20,8 @@ public class AppUser {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    @Column(name = "password_hash")
+    private String passwordHash; // null for Google-only accounts
 
     @Column(name = "full_name", nullable = false)
     private String fullName;
@@ -36,6 +36,13 @@ public class AppUser {
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
+
+    /** 'local' or 'google' — teammate RBAC work keys off role, not this. */
+    @Column(nullable = false)
+    private String provider = "local";
+
+    @Column(name = "provider_subject")
+    private String providerSubject;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;

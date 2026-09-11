@@ -63,6 +63,10 @@ app:
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket: ${MINIO_BUCKET:intellireport-docs}
     secure: ${MINIO_SECURE:false}
+  frontend:
+    base-url: ${APP_FRONTEND_URL:http://localhost:3000}
+  oauth:
+    default-role: ${APP_OAUTH_DEFAULT_ROLE:DATA_CORRECTOR}
 
 logging:
   level:

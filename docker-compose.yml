@@ -57,6 +57,9 @@ services:
       APP_LLM_ENDPOINT: ${APP_LLM_ENDPOINT:-http://localhost:11434}
       APP_LLM_MODEL: ${APP_LLM_MODEL:-llama3.1:8b}
       APP_LLM_API_KEY: ${APP_LLM_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
     ports:
       - "8080:8080"
     depends_on:

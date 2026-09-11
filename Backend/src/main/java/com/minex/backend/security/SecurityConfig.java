@@ -1,5 +1,6 @@
 package com.minex.backend.security;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,24 +23,34 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
     private final JwtAuthFilter jwtFilter;
+    private final GoogleLoginSuccessHandler googleSuccess;
 
-    public SecurityConfig(JwtAuthFilter jwtFilter) {
+    public SecurityConfig(JwtAuthFilter jwtFilter, GoogleLoginSuccessHandler googleSuccess) {
         this.jwtFilter = jwtFilter;
+        this.googleSuccess = googleSuccess;
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http
+    SecurityFilterChain filterChain(HttpSecurity http,
+            ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository> oauthRepo)
+            throws Exception {
+        http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/v1/auth/**", "/actuator/health", "/error")
+                        .requestMatchers("/api/v1/auth/**", "/actuator/health", "/error",
+                                "/oauth2/**", "/login/oauth2/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated())
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        // Google Sign-In only when GOOGLE_CLIENT_ID is configured; otherwise
+        // the app boots as password-login-only (teammate auth merges here).
+        if (oauthRepo.getIfAvailable() != null) {
+            http.oauth2Login(o -> o.successHandler(googleSuccess));
+        }
+        return http.build();
     }
 
     @Bean

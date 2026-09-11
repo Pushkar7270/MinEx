@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, setToken } from "../api";
+import { api, apiBase, setToken } from "../api";
 
 export default function Login() {
   const [email, setEmail] = useState("corrector@minex.local");
   const [password, setPassword] = useState("Corrector123!");
   const [error, setError] = useState("");
+  const [google, setGoogle] = useState({ google: false, googleUrl: "" });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    api.providers().then(setGoogle).catch(() => {});
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -28,6 +33,18 @@ export default function Login() {
         </div>
         <h3>Sign in</h3>
         <p className="sub">Role-based access — every account has exactly one role.</p>
+        {google.google ? (
+          <button
+            className="btn ghost"
+            style={{ width: "100%", marginBottom: 12 }}
+            onClick={() => (window.location.href = apiBase + google.googleUrl)}
+          >
+            <span style={{ fontWeight: 800 }}>G</span>&nbsp;&nbsp;Continue with Google
+          </button>
+        ) : (
+          <p className="muted">Google Sign-In not configured on this deployment.</p>
+        )}
+        <div className="sub" style={{ textAlign: "center" }}>— or with email —</div>
         <form onSubmit={submit}>
           <label>Email</label>
           <input value={email} onChange={(e) => setEmail(e.target.value)} />

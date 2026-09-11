@@ -53,9 +53,14 @@ async function uploadDoc(file) {
   return data;
 }
 
+export const apiBase = BASE;
+
 export const api = {
   login: (email, password) =>
     req("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  providers: () => req("/api/v1/auth/providers"),
+  me: () => req("/api/v1/auth/me"),
+  roleList: () => req("/api/v1/auth/roles"),
   summary: () => req("/api/v1/dashboard/summary"),
   timeseries: (id, from, to) => {
     const q = new URLSearchParams();

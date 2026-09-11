@@ -23,6 +23,10 @@ public class Role {
     @Column(nullable = false, unique = true)
     private Integer rank;
 
+    /** Discord-style display color, e.g. "#e06c75". */
+    @Column(nullable = false)
+    private String color = "#8b6cc1";
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 }
