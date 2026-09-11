@@ -35,7 +35,7 @@ public class FieldsController {
         }
     }
 
-    public record CorrectionRequest(Double fieldValue, String fieldText) {}
+    public record CorrectionRequest(Double fieldValue, String fieldText, String category) {}
 
     @GetMapping("/api/v1/documents/{id}/review-queue")
     @PreAuthorize("isAuthenticated()")
@@ -48,7 +48,7 @@ public class FieldsController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('DATA_CORRECTOR','SUB_SUPERVISOR','SUPERVISOR','MANAGER','ADMIN')")
     public FieldResponse correct(@PathVariable UUID id, @RequestBody CorrectionRequest req) {
-        return FieldResponse.of(review.correct(id, req.fieldValue(), req.fieldText(),
+        return FieldResponse.of(review.correct(id, req.fieldValue(), req.fieldText(), req.category(),
                 currentUser.requireCurrentUser()));
     }
 

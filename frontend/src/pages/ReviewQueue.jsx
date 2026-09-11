@@ -64,9 +64,9 @@ export default function ReviewQueue({ onToast }) {
 
   const submitCorrection = (row) => {
     const v = edit[row.id];
-    if (!v || (v.value === undefined && v.text === undefined)) return;
+    if (!v || (v.value === undefined && v.text === undefined && v.category === undefined)) return;
     act(async () => {
-      const res = await api.correct(row.id, v.value === "" || v.value === undefined ? null : Number(v.value), v.text || null);
+      const res = await api.correct(row.id, v.value === "" || v.value === undefined ? null : Number(v.value), v.text || null, v.category || null);
       onToast(`Saved as version ${res.version} — old version kept for audit`);
     }, null);
   };
@@ -138,6 +138,11 @@ export default function ReviewQueue({ onToast }) {
                     <input
                       placeholder="value"
                       onChange={(e) => setEdit({ ...edit, [r.id]: { ...edit[r.id], value: e.target.value } })}
+                    />
+                    <input
+                      placeholder="category?"
+                      style={{ width: 110 }}
+                      onChange={(e) => setEdit({ ...edit, [r.id]: { ...edit[r.id], category: e.target.value } })}
                     />
                     <button className="btn small ghost" onClick={() => submitCorrection(r)}>Save</button>
                   </div>

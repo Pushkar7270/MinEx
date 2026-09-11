@@ -86,12 +86,15 @@ export const api = {
   upload: uploadDoc,
   reviewQueue: (docId, page = 0, size = 50) =>
     req(`/api/v1/documents/${docId}/review-queue?page=${page}&size=${size}`),
-  correct: (id, fieldValue, fieldText) =>
+  correct: (id, fieldValue, fieldText, category) =>
     req(`/api/v1/fields/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ fieldValue, fieldText }),
+      body: JSON.stringify({ fieldValue, fieldText, category }),
     }),
   approve: (id) => req(`/api/v1/fields/${id}/approve`, { method: "POST" }),
   reject: (id) => req(`/api/v1/fields/${id}/reject`, { method: "POST" }),
   publish: (id) => req(`/api/v1/fields/${id}/publish`, { method: "POST" }),
+  listUsers: (page = 0, size = 50) => req(`/api/v1/users?page=${page}&size=${size}`),
+  changeRole: (id, role) =>
+    req(`/api/v1/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
 };

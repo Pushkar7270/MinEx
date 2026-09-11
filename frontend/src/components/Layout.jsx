@@ -1,12 +1,14 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api, clearToken, emailFromToken, roleFromToken } from "../api";
 import { useEffect, useState } from "react";
+import AssignRoles from "./AssignRoles";
 
 export default function Layout({ onToast }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({ email: emailFromToken(), role: roleFromToken(), roleColor: "#8b6cc1" });
   const [hierarchy, setHierarchy] = useState([]);
   const [showProfile, setShowProfile] = useState(false);
+  const [showRoles, setShowRoles] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
 
@@ -60,6 +62,11 @@ export default function Layout({ onToast }) {
           </div>
         )}
         <div className="sidebar-foot">
+          {profile.role === "ADMIN" && (
+            <button className="nav-item" onClick={() => setShowRoles(true)} style={{ width: "100%" }}>
+              <span>🛡</span> Assign Roles
+            </button>
+          )}
           <div className="role-chip">
             Signed in as<b>{profile.fullName || profile.email}</b>
             <span className="email-small">{profile.email}</span>
@@ -98,6 +105,9 @@ export default function Layout({ onToast }) {
           </div>
         </div>
         <Outlet />
+        {showRoles && (
+          <AssignRoles onClose={() => { setShowRoles(false); reloadProfile(); }} onToast={onToast} />
+        )}
         {showProfile && (
           <div className="modal-overlay" onClick={() => setShowProfile(false)}>
             <div className="profile-card" onClick={(e) => e.stopPropagation()}>

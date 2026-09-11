@@ -4,6 +4,7 @@ import com.minex.backend.domain.AppUser;
 import com.minex.backend.domain.ApprovalRule;
 import com.minex.backend.domain.ExtractedField;
 import com.minex.backend.repo.ApprovalRuleRepository;
+import com.minex.backend.repo.CategoryRepository;
 import com.minex.backend.repo.ExtractedFieldRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -26,13 +27,15 @@ public class FieldReviewService {
 
     private final ExtractedFieldRepository fields;
     private final ApprovalRuleRepository rules;
+    private final CategoryRepository categories;
     private final DocumentService documents;
     private final AuditService audit;
 
     public FieldReviewService(ExtractedFieldRepository fields, ApprovalRuleRepository rules,
-                              DocumentService documents, AuditService audit) {
+                              CategoryRepository categories, DocumentService documents, AuditService audit) {
         this.fields = fields;
         this.rules = rules;
+        this.categories = categories;
         this.documents = documents;
         this.audit = audit;
     }
@@ -45,11 +48,12 @@ public class FieldReviewService {
 
     /** Data Corrector submits a correction: new version row, status pending_review. */
     @Transactional
-    public ExtractedField correct(UUID fieldId, Double newValue, String newText, AppUser corrector) {
+    public ExtractedField correct(UUID fieldId, Double newValue, String newText, String categoryName,
+                                  AppUser corrector) {
         ExtractedField current = require(fieldId);
         ExtractedField next = new ExtractedField();
         next.setDocument(current.getDocument());
-        next.setCategory(current.getCategory());
+        next.setCategory(resolveCategory(categoryName, current));
         next.setPeriod(current.getPeriod());
         next.setFieldName(current.getFieldName());
         next.setFieldValue(newValue);
@@ -111,6 +115,12 @@ public class FieldReviewService {
     private ExtractedField require(UUID id) {
         return fields.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
+    }
+
+    private com.minex.backend.domain.Category resolveCategory(String name, ExtractedField current) {
+        if (name == null || name.isBlank()) return current.getCategory();
+        return categories.findByName(name.strip())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown category"));
     }
 
     private void transition(ExtractedField field, AppUser actor, String toStatus, String auditAction) {
