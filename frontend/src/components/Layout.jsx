@@ -62,7 +62,7 @@ export default function Layout({ onToast }) {
         <div className="sidebar-foot">
           <div className="role-chip">
             Signed in as<b>{profile.fullName || profile.email}</b>
-            <span className="muted" style={{ display: "block", fontSize: 11 }}>{profile.email}</span>
+            <span className="email-small">{profile.email}</span>
             <span className="role-pill" style={{ borderColor: profile.roleColor, color: profile.roleColor }}>
               {profile.role?.replace(/_/g, " ")}
             </span>

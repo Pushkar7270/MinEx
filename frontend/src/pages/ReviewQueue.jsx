@@ -89,6 +89,12 @@ export default function ReviewQueue({ onToast }) {
       <div className="card">
         <h3>Documents</h3>
         <p className="sub">Your uploads and their processing status.</p>
+        {docs.length === 0 && (
+          <p className="muted">
+            Nothing here yet. Upload a report above — Data Correctors review their own uploads,
+            so your review queue fills up once your first file is processed.
+          </p>
+        )}
         <table className="data">
           <thead>
             <tr><th>File</th><th>Type</th><th>Status</th><th></th></tr>

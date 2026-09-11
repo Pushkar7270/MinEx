@@ -45,14 +45,20 @@ export default function Dashboard() {
   const filtered =
     periodFilter === "ALL" ? series : series.filter((p) => p.period === periodFilter);
 
+  const shortName = (f) => (f && f.length > 28 ? f.slice(0, 27) + "…" : f || "—");
+
   // Aggregate latest value per field name for the chart (period on X axis).
+  // Null periods (e.g. spreadsheets with no FY mention) bucket as "Undated"
+  // and sort last; same period+field collisions keep the last value.
   const chartData = useMemo(() => {
     const byPeriod = new Map();
     for (const p of filtered) {
-      if (!byPeriod.has(p.period)) byPeriod.set(p.period, { period: p.period });
-      byPeriod.get(p.period)[p.field] = Number(p.value) || 0;
+      const period = p.period || "Undated";
+      if (!byPeriod.has(period)) byPeriod.set(period, { period });
+      byPeriod.get(period)[shortName(p.field)] = Number(p.value) || 0;
     }
-    return [...byPeriod.values()].sort((a, b) => String(a.period).localeCompare(String(b.period)));
+    const rank = (x) => (x === "Undated" ? "~~~" : String(x));
+    return [...byPeriod.values()].sort((a, b) => rank(a.period).localeCompare(rank(b.period)));
   }, [filtered]);
 
   const fieldKeys = useMemo(() => {
@@ -60,7 +66,8 @@ export default function Dashboard() {
     const peak = new Map();
     for (const p of filtered) {
       const v = Number(p.value) || 0;
-      if (v > (peak.get(p.field) || 0)) peak.set(p.field, v);
+      const k = shortName(p.field);
+      if (v > (peak.get(k) || 0)) peak.set(k, v);
     }
     return [...peak.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k);
   }, [filtered]);
