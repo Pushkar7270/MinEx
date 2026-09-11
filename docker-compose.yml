@@ -1,0 +1,79 @@
+services:
+  postgres:
+    # pgvector image (PostGIS added when the geo map view lands; nothing in
+    # Phase 1 uses geo/vector column types yet). One shared instance per PRD §3.
+    image: pgvector/pgvector:0.8.0-pg16
+    container_name: intellireport-postgres
+    environment:
+      POSTGRES_DB: intellireport
+      POSTGRES_USER: intellireport
+      POSTGRES_PASSWORD: intellireport
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intellireport -d intellireport"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-07T23-21-09Z
+    container_name: intellireport-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Phase 1 API. Run with: docker compose up --build
+  # (or run locally via ./mvnw spring-boot:run inside Backend/)
+  ingestion-service:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: intellireport-ingestion
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/intellireport
+      SPRING_DATASOURCE_USERNAME: intellireport
+      SPRING_DATASOURCE_PASSWORD: intellireport
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: intellireport-docs
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-change-me-to-a-256-bit-secret-for-local-dev-only-0123456789}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  # Dashboard (React). Browser calls the API directly, so CORS allows port 3000.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    container_name: intellireport-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - ingestion-service
+
+volumes:
+  pgdata:
+  miniodata:

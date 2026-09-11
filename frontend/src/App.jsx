@@ -1,0 +1,41 @@
+import { useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import Layout from "./components/Layout";
+import Dashboard from "./pages/Dashboard";
+import ReviewQueue from "./pages/ReviewQueue";
+import Login from "./pages/Login";
+import { ChatSoon, DraftsSoon } from "./pages/ComingSoon";
+import { getToken } from "./api";
+
+function Protected({ children }) {
+  return getToken() ? children : <Navigate to="/login" replace />;
+}
+
+export default function App() {
+  const [toast, setToast] = useState("");
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2600);
+  };
+
+  return (
+    <BrowserRouter>
+      {toast && <div className="toast">{toast}</div>}
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          element={
+            <Protected>
+              <Layout onToast={showToast} />
+            </Protected>
+          }
+        >
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/review" element={<ReviewQueue onToast={showToast} />} />
+          <Route path="/chat" element={<ChatSoon onToast={showToast} />} />
+          <Route path="/drafts" element={<DraftsSoon onToast={showToast} />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}

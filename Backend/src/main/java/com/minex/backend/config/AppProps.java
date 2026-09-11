@@ -1,0 +1,62 @@
+package com.minex.backend.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+/** Binds the `app.*` keys from application.yml (PRD §4/§9 tunables). */
+@Getter
+@Setter
+@Component
+@ConfigurationProperties(prefix = "app")
+public class AppProps {
+    private final Jwt jwt = new Jwt();
+    private final Files files = new Files();
+    private final Extraction extraction = new Extraction();
+    private final Minio minio = new Minio();
+    private final Llm llm = new Llm();
+
+    @Getter
+    @Setter
+    public static class Jwt {
+        private String secret;
+        private long accessTokenTtlMinutes = 60;
+        private long refreshTokenTtlDays = 7;
+    }
+
+    @Getter
+    @Setter
+    public static class Files {
+        private long maxSizeBytes = 209715200L;
+        private String allowedMimeTypes = "application/pdf";
+    }
+
+    @Getter
+    @Setter
+    public static class Extraction {
+        private double confidenceThreshold = 0.75;
+    }
+
+    @Getter
+    @Setter
+    public static class Minio {
+        private String endpoint;
+        private String accessKey;
+        private String secretKey;
+        private String bucket;
+        private boolean secure;
+    }
+
+    @Getter
+    @Setter
+    public static class Llm {
+        /** none | ollama (local Llama) | openai-compatible (hosted, e.g. Kimi). */
+        private String provider = "none";
+        private String endpoint = "http://localhost:11434";
+        private String model = "llama3.1:8b";
+        private String apiKey = "";
+        private double minConfidence = 0.7;
+        private long timeoutSeconds = 60;
+    }
+}

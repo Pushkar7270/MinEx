@@ -1,0 +1,7 @@
+# Local-dev port mapping for machines that already run Postgres on 5432
+# (e.g. a Windows Postgres service). Infra only — run the backend from your IDE.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres minio
+services:
+  postgres:
+    ports:
+      - "5433:5432"
