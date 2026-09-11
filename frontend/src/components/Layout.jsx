@@ -14,7 +14,10 @@ export default function Layout({ onToast }) {
     api.me().then(setProfile).catch(() => {});
     api.roleList().then(setHierarchy).catch(() => {});
   };
-  const initials = (profile.email || "?").slice(0, 2).toUpperCase();
+  const nameWords = (profile.fullName || "").trim().split(/\s+/).filter(Boolean);
+  const initials = (nameWords.length > 1
+    ? nameWords[0][0] + nameWords[1][0]
+    : (nameWords[0]?.[0] || profile.email || "?").slice(0, 2)).toUpperCase();
 
   useEffect(() => {
     // Discord-style profile: role color + full hierarchy from the server.
@@ -58,7 +61,8 @@ export default function Layout({ onToast }) {
         )}
         <div className="sidebar-foot">
           <div className="role-chip">
-            Signed in as<b>{profile.email}</b>
+            Signed in as<b>{profile.fullName || profile.email}</b>
+            <span className="muted" style={{ display: "block", fontSize: 11 }}>{profile.email}</span>
             <span className="role-pill" style={{ borderColor: profile.roleColor, color: profile.roleColor }}>
               {profile.role?.replace(/_/g, " ")}
             </span>
@@ -71,7 +75,7 @@ export default function Layout({ onToast }) {
       <div className="main">
         <div className="topbar">
           <div>
-            <h1>Welcome{profile.email ? `, ${profile.email.split("@")[0]}` : ""}</h1>
+            <h1>Welcome{profile.fullName ? `, ${profile.fullName.split(" ")[0]}` : ""}</h1>
             <p>Here&apos;s your mining intelligence overview</p>
           </div>
           <div className="topbar-right">
@@ -82,7 +86,8 @@ export default function Layout({ onToast }) {
               🔔
             </button>
             <div className="user-meta">
-              <b>{profile.email}</b>
+              <b>{profile.fullName || profile.email}</b>
+              <span className="muted" style={{ display: "block", fontSize: 11 }}>{profile.email}</span>
               <span className="role-pill" style={{ borderColor: profile.roleColor, color: profile.roleColor }}>
                 {profile.role?.replace(/_/g, " ")}
               </span>
