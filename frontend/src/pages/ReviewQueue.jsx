@@ -50,12 +50,13 @@ export default function ReviewQueue({ onToast }) {
     }
   };
 
-  const act = async (fn, id, label) => {
+  const act = async (fn, label) => {
     setError("");
     try {
-      await fn();
-      onToast(`${label} recorded`);
+      const res = await fn();
+      if (label) onToast(label);
       refresh();
+      return res;
     } catch (e) {
       setError(e.message);
     }
@@ -63,12 +64,11 @@ export default function ReviewQueue({ onToast }) {
 
   const submitCorrection = (row) => {
     const v = edit[row.id];
-    if (!v) return;
-    act(
-      () => api.correct(row.id, v.value === "" ? null : Number(v.value), v.text || null),
-      row.id,
-      "Correction submitted as new version"
-    );
+    if (!v || (v.value === undefined && v.text === undefined)) return;
+    act(async () => {
+      const res = await api.correct(row.id, v.value === "" || v.value === undefined ? null : Number(v.value), v.text || null);
+      onToast(`Saved as version ${res.version} — old version kept for audit`);
+    }, null);
   };
 
   return (
@@ -113,16 +113,20 @@ export default function ReviewQueue({ onToast }) {
         </p>
         <table className="data">
           <thead>
-            <tr><th>Field</th><th>Value</th><th>Category</th><th>Period</th><th>Conf.</th><th>Correct</th><th>Decision</th></tr>
+            <tr><th>Field</th><th>Value</th><th>Category</th><th>Period</th><th>Conf.</th><th>Status</th><th>Correct</th><th>Decision</th></tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {rows.map((r) => {
+              const pending = r.status === "pending_review";
+              const approved = r.status === "approved";
+              return (
               <tr key={r.id}>
                 <td>{r.fieldName}</td>
                 <td><b>{r.fieldValue ?? r.fieldText}</b> <span className="muted">{r.unit}</span></td>
                 <td className="muted">{r.category || "—"}</td>
                 <td className="muted">{r.period || "—"}</td>
                 <td className="muted">{Math.round(r.confidenceScore * 100)}%</td>
+                <td><span className="pill">{r.status} · v{r.version}</span></td>
                 <td>
                   <div className="inline-edit">
                     <input
@@ -136,23 +140,27 @@ export default function ReviewQueue({ onToast }) {
                   <div className="row-btns">
                     <button
                       className="btn small"
-                      disabled={!REVIEWER_ROLES.includes(role)}
-                      onClick={() => act(() => api.approve(r.id), r.id, "Approved")}
+                      disabled={!REVIEWER_ROLES.includes(role) || !pending}
+                      title={!pending ? "Only pending items can be approved" : "Approve"}
+                      onClick={() => act(() => api.approve(r.id), "Approved")}
                     >Approve</button>
                     <button
                       className="btn small danger"
-                      disabled={!REVIEWER_ROLES.includes(role)}
-                      onClick={() => act(() => api.reject(r.id), r.id, "Rejected")}
+                      disabled={!REVIEWER_ROLES.includes(role) || !pending}
+                      title={!pending ? "Only pending items can be rejected" : "Reject"}
+                      onClick={() => act(() => api.reject(r.id), "Rejected")}
                     >Reject</button>
                     <button
                       className="btn small ghost"
-                      disabled={!PUBLISH_ROLES.includes(role)}
-                      onClick={() => act(() => api.publish(r.id), r.id, "Published")}
+                      disabled={!PUBLISH_ROLES.includes(role) || !approved}
+                      title={!approved ? "Approve first, then publish" : "Publish to dashboard"}
+                      onClick={() => act(() => api.publish(r.id), "Published to dashboard")}
                     >Publish</button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         {rows.length === 0 && <p className="muted">Nothing awaiting review for this document.</p>}

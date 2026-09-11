@@ -53,6 +53,10 @@ services:
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: intellireport-docs
       APP_JWT_SECRET: ${APP_JWT_SECRET:-change-me-to-a-256-bit-secret-for-local-dev-only-0123456789}
+      APP_LLM_PROVIDER: ${APP_LLM_PROVIDER:-none}
+      APP_LLM_ENDPOINT: ${APP_LLM_ENDPOINT:-http://localhost:11434}
+      APP_LLM_MODEL: ${APP_LLM_MODEL:-llama3.1:8b}
+      APP_LLM_API_KEY: ${APP_LLM_API_KEY:-}
     ports:
       - "8080:8080"
     depends_on:

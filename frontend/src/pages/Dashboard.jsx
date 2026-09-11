@@ -55,10 +55,18 @@ export default function Dashboard() {
     return [...byPeriod.values()].sort((a, b) => String(a.period).localeCompare(String(b.period)));
   }, [filtered]);
 
-  const fieldKeys = useMemo(
-    () => [...new Set(filtered.map((p) => p.field))].slice(0, 5),
-    [filtered]
-  );
+  const fieldKeys = useMemo(() => {
+    // Top 5 fields by peak value — keeps ToC noise from drowning the chart.
+    const peak = new Map();
+    for (const p of filtered) {
+      const v = Number(p.value) || 0;
+      if (v > (peak.get(p.field) || 0)) peak.set(p.field, v);
+    }
+    return [...peak.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k);
+  }, [filtered]);
+
+  const compact = (v) =>
+    Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`;
 
   const verifiedTotal = (summary?.categories || []).reduce(
     (n, c) => n + (c.publishedMetrics || 0),
@@ -168,6 +176,11 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="chart-wrap">
+            {chartData.length === 0 ? (
+              <p className="muted" style={{ padding: "60px 0", textAlign: "center" }}>
+                No approved figures here yet — approve items in the Review Queue and they will chart here.
+              </p>
+            ) : (
             <ResponsiveContainer>
               <AreaChart data={chartData}>
                 <defs>
@@ -178,22 +191,27 @@ export default function Dashboard() {
                 </defs>
                 <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} />
                 <XAxis dataKey="period" tick={{ fill: "#ab9cb9", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#ab9cb9", fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
+                <YAxis tick={{ fill: "#ab9cb9", fontSize: 11 }} axisLine={false} tickLine={false} width={60} tickFormatter={compact} />
                 <Tooltip
                   contentStyle={{ background: "#2c2138", border: "1px solid rgba(192,132,184,.4)", borderRadius: 12 }}
+                  formatter={(v) => [Number(v).toLocaleString(), ""]}
                 />
                 {fieldKeys.map((k, i) => (
                   <Area
                     key={k}
                     type="monotone"
                     dataKey={k}
+                    connectNulls
                     stroke={i === 0 ? "#c084b8" : "#8b6cc1"}
                     fill="url(#g0)"
+                    fillOpacity={i === 0 ? 1 : 0.25}
                     strokeWidth={2}
+                    dot={{ r: 3, fill: i === 0 ? "#c084b8" : "#8b6cc1" }}
                   />
                 ))}
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
