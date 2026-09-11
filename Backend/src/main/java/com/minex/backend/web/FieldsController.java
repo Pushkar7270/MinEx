@@ -46,26 +46,26 @@ public class FieldsController {
 
     @PatchMapping("/api/v1/fields/{id}")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('DATA_CORRECTOR','SUB_SUPERVISOR','SUPERVISOR','MANAGER','ADMIN')")
+    @PreAuthorize("@rbac.canCorrect()")
     public FieldResponse correct(@PathVariable UUID id, @RequestBody CorrectionRequest req) {
         return FieldResponse.of(review.correct(id, req.fieldValue(), req.fieldText(), req.category(),
                 currentUser.requireCurrentUser()));
     }
 
     @PostMapping("/api/v1/fields/{id}/approve")
-    @PreAuthorize("hasAnyRole('SUB_SUPERVISOR','SUPERVISOR','MANAGER','ADMIN')")
+    @PreAuthorize("@rbac.canReview()")
     public FieldResponse approve(@PathVariable UUID id) {
         return FieldResponse.of(review.approve(id, currentUser.requireCurrentUser()));
     }
 
     @PostMapping("/api/v1/fields/{id}/reject")
-    @PreAuthorize("hasAnyRole('SUB_SUPERVISOR','SUPERVISOR','MANAGER','ADMIN')")
+    @PreAuthorize("@rbac.canReview()")
     public FieldResponse reject(@PathVariable UUID id) {
         return FieldResponse.of(review.reject(id, currentUser.requireCurrentUser()));
     }
 
     @PostMapping("/api/v1/fields/{id}/publish")
-    @PreAuthorize("hasAnyRole('SUPERVISOR','MANAGER','ADMIN')")
+    @PreAuthorize("@rbac.canPublish()")
     public FieldResponse publish(@PathVariable UUID id) {
         // Method security is the coarse gate; FieldReviewService re-checks rank + four-eyes.
         return FieldResponse.of(review.publish(id, currentUser.requireCurrentUser()));

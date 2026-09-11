@@ -16,6 +16,7 @@ public class AppProps {
     private final Extraction extraction = new Extraction();
     private final Minio minio = new Minio();
     private final Llm llm = new Llm();
+    private final RbacRules rbac = new RbacRules();
 
     @Getter
     @Setter
@@ -58,5 +59,23 @@ public class AppProps {
         private String apiKey = "";
         private double minConfidence = 0.7;
         private long timeoutSeconds = 60;
+    }
+
+    /**
+     * Role privileges are derived from a role's numeric rank (data, not names)
+     * against these thresholds. Change the taxonomy in the DB and tune these —
+     * no code edits needed.
+     */
+    @Getter
+    @Setter
+    public static class RbacRules {
+        /** May submit corrections / upload documents. */
+        private int correctRank = 10;
+        /** May approve or reject submitted figures. */
+        private int reviewRank = 20;
+        /** May publish approved figures to dashboards. */
+        private int publishRank = 30;
+        /** May change other users' roles. */
+        private int adminRank = 100;
     }
 }

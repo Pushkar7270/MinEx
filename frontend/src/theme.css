@@ -1,5 +1,6 @@
 /* Helios-style dark glass theme for MinEx IntelliReport */
 :root {
+  color-scheme: dark; /* native selects/options/scrollbars render dark, not white */
   --bg: #141019;
   --bg-soft: #1a1421;
   --sidebar: #1d1526;
@@ -59,6 +60,10 @@ a { color: inherit; text-decoration: none; }
   font-size: 14px; border: 1px solid transparent;
 }
 .nav-item:hover { background: rgba(255,255,255,.05); color: var(--text); }
+/* <button class="nav-item"> (e.g. admin-only "Assign Roles") otherwise renders
+   with the browser's default light buttonface background — reset it to match. */
+button.nav-item { appearance: none; -webkit-appearance: none; background: transparent; cursor: pointer; text-align: left; font-family: inherit; }
+button.nav-item:hover { background: rgba(255,255,255,.05); color: var(--text); }
 .nav-item.active {
   background: linear-gradient(90deg, rgba(192,132,184,.35), rgba(139,108,193,.18));
   color: var(--text); border-color: rgba(192,132,184,.25);
@@ -203,6 +208,9 @@ input, select {
   border-radius: 10px; padding: 9px 12px; font-size: 13px; width: 100%;
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); }
+/* Native option lists ignore the select's background; style them explicitly so
+   the role picker / filters never show a white popup on the dark theme. */
+select option { background: #2c2138; color: var(--text); }
 label { font-size: 12px; color: var(--muted); display: block; margin: 10px 0 4px; }
 .form-card { max-width: 400px; margin: 12vh auto; }
 .error { color: var(--bad); font-size: 13px; margin-top: 10px; }
@@ -216,6 +224,19 @@ label { font-size: 12px; color: var(--muted); display: block; margin: 10px 0 4px
 .muted { color: var(--muted); font-size: 13px; }
 .inline-edit { display: flex; gap: 6px; }
 .inline-edit input { width: 90px; padding: 6px 8px; }
+
+/* Placeholder sign-ins on the login page */
+.demo-logins { display: grid; gap: 6px; }
+.demo-login {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center;
+  width: 100%; cursor: pointer; text-align: left;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  border-radius: 10px; padding: 8px 10px; color: var(--text); font-size: 12px;
+}
+.demo-login:hover { border-color: rgba(192,132,184,.45); background: rgba(192,132,184,.10); }
+.demo-role { font-weight: 600; min-width: 118px; }
+.demo-email { color: var(--muted); }
+.demo-pass { margin-left: auto; color: var(--accent); font-family: ui-monospace, "Cascadia Code", monospace; }
 .chart-wrap { width: 100%; height: 300px; }
 .doc-bar { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
 .doc-bar > div { min-width: 220px; flex: 1; }

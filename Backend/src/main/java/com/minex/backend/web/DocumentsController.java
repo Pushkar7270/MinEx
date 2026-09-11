@@ -37,7 +37,7 @@ public class DocumentsController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('DATA_CORRECTOR','SUB_SUPERVISOR','SUPERVISOR','MANAGER','ADMIN')")
+    @PreAuthorize("@rbac.canCorrect()")
     public List<DocResponse> upload(@RequestPart("file") MultipartFile file) throws IOException {
         var uploader = currentUser.requireCurrentUser();
         return docs.upload(file, uploader).stream().map(DocResponse::of).toList();
@@ -56,7 +56,7 @@ public class DocumentsController {
     }
 
     @PostMapping("/{id}/reprocess")
-    @PreAuthorize("hasAnyRole('SUPERVISOR','MANAGER','ADMIN')")
+    @PreAuthorize("@rbac.canPublish()")
     public DocResponse reprocess(@PathVariable UUID id) {
         return DocResponse.of(docs.reprocess(id, currentUser.requireCurrentUser()));
     }

@@ -84,23 +84,17 @@ public class DocumentService {
         stored.forEach(doc -> events.publishEvent(new DocumentUploadedEvent(doc.getId())));
         return stored;
     }
-
     @Transactional(readOnly = true)
     public Page<Document> list(AppUser viewer, Pageable pageable) {
-        if ("DATA_CORRECTOR".equals(viewer.getRole().getName())) {
-            return documents.findByUploadedBy(viewer, pageable);
-        }
+        // Every authenticated role sees every document: review is team work
+        // (upload attribution is kept for audit, not for visibility).
         return documents.findAll(pageable);
     }
 
     @Transactional(readOnly = true)
-    public Document get(UUID id, AppUser viewer) {        Document doc = documents.findById(id)
+    public Document get(UUID id, AppUser viewer) {
+        return documents.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
-        if ("DATA_CORRECTOR".equals(viewer.getRole().getName())
-                && (doc.getUploadedBy() == null || !doc.getUploadedBy().getId().equals(viewer.getId()))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not permitted for your role");
-        }
-        return doc;
     }
 
     /** Re-queues a document for extraction (listener fires after this transaction commits). */

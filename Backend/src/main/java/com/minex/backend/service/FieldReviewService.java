@@ -1,5 +1,6 @@
 package com.minex.backend.service;
 
+import com.minex.backend.config.AppProps;
 import com.minex.backend.domain.AppUser;
 import com.minex.backend.domain.ApprovalRule;
 import com.minex.backend.domain.ExtractedField;
@@ -7,9 +8,14 @@ import com.minex.backend.repo.ApprovalRuleRepository;
 import com.minex.backend.repo.CategoryRepository;
 import com.minex.backend.repo.ExtractedFieldRepository;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,20 +36,56 @@ public class FieldReviewService {
     private final CategoryRepository categories;
     private final DocumentService documents;
     private final AuditService audit;
+    private final AppProps props;
 
     public FieldReviewService(ExtractedFieldRepository fields, ApprovalRuleRepository rules,
-                              CategoryRepository categories, DocumentService documents, AuditService audit) {
+                              CategoryRepository categories, DocumentService documents, AuditService audit,
+                              AppProps props) {
         this.fields = fields;
         this.rules = rules;
         this.categories = categories;
         this.documents = documents;
         this.audit = audit;
+        this.props = props;
     }
 
     @Transactional(readOnly = true)
     public Page<ExtractedField> reviewQueue(UUID documentId, AppUser viewer, Pageable pageable) {
         documents.get(documentId, viewer); // access check
-        return fields.findByDocumentIdAndNeedsReviewTrue(documentId, pageable);
+        // The queue is every figure awaiting a decision (pending_review) — not just
+        // the machine-flagged ones. A correction produces a new version with
+        // needs_review=false, so filtering on that flag hid corrected rows from
+        // reviewers and they could never be approved/published onto the dashboard.
+        // Collapse to the newest version per field+period across *all* statuses
+        // first: a superseded draft must not reappear once its successor has been
+        // approved/rejected/published.
+        Map<String, ExtractedField> latest = new LinkedHashMap<>();
+        for (ExtractedField f : fields.findByDocumentId(documentId)) {
+            String key = f.getFieldName() + "\u0000" + f.getPeriod();
+            ExtractedField prev = latest.get(key);
+            if (prev == null || isNewer(f, prev)) {
+                latest.put(key, f);
+            }
+        }
+        List<ExtractedField> distinct = new ArrayList<>();
+        for (ExtractedField f : latest.values()) {
+            if ("pending_review".equals(f.getStatus())) {
+                distinct.add(f);
+            }
+        }
+        distinct.sort(Comparator.comparing(ExtractedField::getCreatedAt,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+        int offset = (int) Math.min(pageable.getOffset(), distinct.size());
+        int end = Math.min(offset + pageable.getPageSize(), distinct.size());
+        return new PageImpl<>(distinct.subList(offset, end), pageable, distinct.size());
+    }
+
+    /** Version wins; UUID breaks exact ties so the winner is deterministic. */
+    private static boolean isNewer(ExtractedField a, ExtractedField b) {
+        if (a.getVersion() != b.getVersion()) {
+            return a.getVersion() > b.getVersion();
+        }
+        return a.getId().compareTo(b.getId()) > 0;
     }
 
     /** Data Corrector submits a correction: new version row, status pending_review. */
@@ -102,7 +144,7 @@ public class FieldReviewService {
         if (!"approved".equals(field.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only approved fields can be published");
         }
-        if (!isAdmin(publisher) && publisher.getRole().getRank() < 30) {
+        if (!isAdmin(publisher) && publisher.getRole().getRank() < props.getRbac().getPublishRank()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not permitted for your role");
         }
         checkFourEyes(publisher, field);
@@ -135,8 +177,8 @@ public class FieldReviewService {
     private void checkMayApprove(AppUser approver, ExtractedField field) {
         AppUser creator = field.getCreatedBy();
         if (creator == null) {
-            // Machine-extracted row: any reviewer role (SUB_SUPERVISOR+) or ADMIN may approve.
-            if (!isAdmin(approver) && approver.getRole().getRank() < 20) {
+            // Machine-extracted row: any role at/above the review rank may approve.
+            if (!isAdmin(approver) && approver.getRole().getRank() < props.getRbac().getReviewRank()) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not permitted for your role");
             }
             return;
@@ -163,6 +205,6 @@ public class FieldReviewService {
     }
 
     private boolean isAdmin(AppUser user) {
-        return "ADMIN".equals(user.getRole().getName());
+        return user.getRole().getRank() >= props.getRbac().getAdminRank();
     }
 }

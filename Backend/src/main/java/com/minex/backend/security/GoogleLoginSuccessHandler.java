@@ -30,7 +30,7 @@ public class GoogleLoginSuccessHandler implements AuthenticationSuccessHandler {
     @Value("${app.frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
 
-    @Value("${app.oauth.default-role:DATA_CORRECTOR}")
+    @Value("${app.oauth.default-role}")
     private String defaultRole;
 
     public GoogleLoginSuccessHandler(UserRepository users, RoleRepository roles, JwtService jwt) {

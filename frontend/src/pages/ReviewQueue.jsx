@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
-import { api, roleFromToken } from "../api";
-
-const REVIEWER_ROLES = ["SUB_SUPERVISOR", "SUPERVISOR", "MANAGER", "ADMIN"];
-const PUBLISH_ROLES = ["SUPERVISOR", "MANAGER", "ADMIN"];
+import { api } from "../api";
 
 export default function ReviewQueue({ onToast }) {
-  const role = roleFromToken();
+  const [me, setMe] = useState(null);
+  const role = me?.role;
+  const canReview = !!me?.canReview;
+  const canPublish = !!me?.canPublish;
   const [docs, setDocs] = useState([]);
   const [docId, setDocId] = useState("");
   const [rows, setRows] = useState([]);
   const [error, setError] = useState("");
   const [file, setFile] = useState(null);
   const [edit, setEdit] = useState({});
+
+  useEffect(() => {
+    api.me().then(setMe).catch(() => {});
+  }, []);
 
   const loadDocs = () =>
     api.documents(0, 50).then((d) => {
@@ -88,11 +92,11 @@ export default function ReviewQueue({ onToast }) {
       </div>
       <div className="card">
         <h3>Documents</h3>
-        <p className="sub">Your uploads and their processing status.</p>
+        <p className="sub">All uploaded reports and their processing status — review is team work.</p>
         {docs.length === 0 && (
           <p className="muted">
-            Nothing here yet. Upload a report above — Data Correctors review their own uploads,
-            so your review queue fills up once your first file is processed.
+            Nothing here yet. Upload a report above — once it is processed,
+            its figures appear here for the whole team to review.
           </p>
         )}
         <table className="data">
@@ -112,10 +116,10 @@ export default function ReviewQueue({ onToast }) {
         </table>
       </div>
       <div className="card">
-        <h3>Review queue {role === "DATA_CORRECTOR" ? "(corrections create new versions)" : ""}</h3>
+        <h3>Review queue {role && !canReview ? "(corrections create new versions)" : ""}</h3>
         <p className="sub">
-          Low-confidence or flagged figures. Signed in as <b>{role}</b>.
-          {!REVIEWER_ROLES.includes(role) && " Your role can submit corrections; approval needs a reviewer."}
+          Figures awaiting a decision — correct, then approve/publish. Signed in as <b>{role || "…"}</b>.
+          {!canReview && " Your role can submit corrections; approval needs a reviewer."}
         </p>
         <table className="data">
           <thead>
@@ -151,19 +155,19 @@ export default function ReviewQueue({ onToast }) {
                   <div className="row-btns">
                     <button
                       className="btn small"
-                      disabled={!REVIEWER_ROLES.includes(role) || !pending}
+                      disabled={!canReview || !pending}
                       title={!pending ? "Only pending items can be approved" : "Approve"}
                       onClick={() => act(() => api.approve(r.id), "Approved")}
                     >Approve</button>
                     <button
                       className="btn small danger"
-                      disabled={!REVIEWER_ROLES.includes(role) || !pending}
+                      disabled={!canReview || !pending}
                       title={!pending ? "Only pending items can be rejected" : "Reject"}
                       onClick={() => act(() => api.reject(r.id), "Rejected")}
                     >Reject</button>
                     <button
                       className="btn small ghost"
-                      disabled={!PUBLISH_ROLES.includes(role) || !approved}
+                      disabled={!canPublish || !approved}
                       title={!approved ? "Approve first, then publish" : "Publish to dashboard"}
                       onClick={() => act(() => api.publish(r.id), "Published to dashboard")}
                     >Publish</button>

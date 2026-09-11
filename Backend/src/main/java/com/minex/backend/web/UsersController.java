@@ -21,7 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @RestController
 @RequestMapping("/api/v1/users")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("@rbac.canManageUsers()")
 public class UsersController {
     private final UserRepository users;
     private final RoleRepository roles;

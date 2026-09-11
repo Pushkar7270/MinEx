@@ -62,7 +62,7 @@ export default function Layout({ onToast }) {
           </div>
         )}
         <div className="sidebar-foot">
-          {profile.role === "ADMIN" && (
+          {profile.canManageUsers && (
             <button className="nav-item" onClick={() => setShowRoles(true)} style={{ width: "100%" }}>
               <span>🛡</span> Assign Roles
             </button>

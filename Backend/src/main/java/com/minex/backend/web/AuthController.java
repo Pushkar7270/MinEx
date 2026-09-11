@@ -1,5 +1,6 @@
 package com.minex.backend.web;
 
+import com.minex.backend.config.AppProps;
 import com.minex.backend.repo.RoleRepository;
 import com.minex.backend.repo.UserRepository;
 import com.minex.backend.service.AuditService;
@@ -7,6 +8,7 @@ import com.minex.backend.security.JwtService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -29,17 +31,19 @@ public class AuthController {
     private final UserRepository users;
     private final RoleRepository roles;
     private final AuditService audit;
+    private final AppProps props;
 
     @Value("${GOOGLE_CLIENT_ID:}")
     private String googleClientId;
 
     public AuthController(AuthenticationManager authManager, JwtService jwt, UserRepository users,
-                          RoleRepository roles, AuditService audit) {
+                          RoleRepository roles, AuditService audit, AppProps props) {
         this.authManager = authManager;
         this.jwt = jwt;
         this.users = users;
         this.roles = roles;
         this.audit = audit;
+        this.props = props;
     }
 
     public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}
@@ -63,19 +67,27 @@ public class AuthController {
         return new AuthResponse(token, user.getEmail(), user.getRole().getName());
     }
 
-    /** Profile for the Discord-style header badge (name, role, color). */
+    /** Profile for the Discord-style header badge (name, role, color) + capabilities. */
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public Map<String, String> me(org.springframework.security.core.Authentication auth) {
+    public Map<String, Object> me(org.springframework.security.core.Authentication auth) {
         var user = users.findByEmailIgnoreCase(auth.getName()).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown user"));
-        return Map.of(
-                "email", user.getEmail(),
-                "fullName", user.getFullName() == null ? user.getEmail() : user.getFullName(),
-                "role", user.getRole().getName(),
-                "roleColor", user.getRole().getColor() == null ? "#8b6cc1" : user.getRole().getColor(),
-                "roleRank", String.valueOf(user.getRole().getRank()),
-                "provider", user.getProvider() == null ? "local" : user.getProvider());
+        int rank = user.getRole().getRank();
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("email", user.getEmail());
+        out.put("fullName", user.getFullName() == null ? user.getEmail() : user.getFullName());
+        out.put("role", user.getRole().getName());
+        out.put("roleColor", user.getRole().getColor() == null ? "#8b6cc1" : user.getRole().getColor());
+        out.put("roleRank", rank);
+        out.put("provider", user.getProvider() == null ? "local" : user.getProvider());
+        // Capabilities (derived from rank + app.rbac thresholds) so the UI never
+        // has to hardcode role names.
+        out.put("canCorrect", rank >= props.getRbac().getCorrectRank());
+        out.put("canReview", rank >= props.getRbac().getReviewRank());
+        out.put("canPublish", rank >= props.getRbac().getPublishRank());
+        out.put("canManageUsers", rank >= props.getRbac().getAdminRank());
+        return out;
     }
 
     /** First-time (and later) display-name setup — own profile only, never roles. */

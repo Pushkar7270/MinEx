@@ -1,15 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Area,
-  AreaChart,
   CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import { api } from "../api";
+
+const CHART_COLORS = ["#c084b8", "#8b6cc1", "#6fc3df", "#7ddba3", "#e3b341"];
+
+const shortName = (f) => (f && f.length > 28 ? f.slice(0, 27) + "…" : f || "—");
+
+// Extractor field names are noisy ("602.14 MT", sentence-length headings,
+// "... Page"). These are still selectable, but the default chart only plots
+// labels that look like real metrics so the graph stays legible.
+const isMetricLabel = (f) => {
+  if (!f) return false;
+  const s = f.trim();
+  if (s.length < 3 || s.length > 40) return false;
+  if (!/^[A-Za-z]/.test(s)) return false;
+  if ((s.match(/[A-Za-z]/g) || []).length < 3) return false;
+  return !/(\bpage\b|annexure|\bfy\s?\d)/i.test(s);
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -18,6 +35,7 @@ export default function Dashboard() {
   const [selected, setSelected] = useState(null);
   const [series, setSeries] = useState([]);
   const [periodFilter, setPeriodFilter] = useState("ALL");
+  const [fieldFilter, setFieldFilter] = useState("ALL");
 
   useEffect(() => {
     api
@@ -38,16 +56,37 @@ export default function Dashboard() {
       .catch((e) => setError(e.message));
   }, [selected]);
 
+  // Reset period/metric filters whenever the user switches category.
+  const pickCategory = (c) => {
+    setSelected(c);
+    setPeriodFilter("ALL");
+    setFieldFilter("ALL");
+  };
+
   const periods = useMemo(
-    () => ["ALL", ...new Set(series.map((p) => p.period).filter(Boolean))],
+    () => ["ALL", ...new Set(series.map((p) => p.period || "Undated"))],
     [series]
   );
   const filtered =
-    periodFilter === "ALL" ? series : series.filter((p) => p.period === periodFilter);
+    periodFilter === "ALL"
+      ? series
+      : series.filter((p) => (p.period || "Undated") === periodFilter);
 
-  const shortName = (f) => (f && f.length > 28 ? f.slice(0, 27) + "…" : f || "—");
+  // Every distinct metric in the current period slice, most-complete first.
+  const fieldOptions = useMemo(() => {
+    const coverage = new Map();
+    for (const p of filtered) {
+      if (!p.field) continue;
+      const seen = coverage.get(p.field) || new Set();
+      seen.add(p.period || "Undated");
+      coverage.set(p.field, seen);
+    }
+    return [...coverage.entries()]
+      .sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0]))
+      .map(([name]) => name);
+  }, [filtered]);
 
-  // Aggregate latest value per field name for the chart (period on X axis).
+  // Aggregate latest value per field for the chart (period on X axis).
   // Null periods (e.g. spreadsheets with no FY mention) bucket as "Undated"
   // and sort last; same period+field collisions keep the last value.
   const chartData = useMemo(() => {
@@ -55,22 +94,26 @@ export default function Dashboard() {
     for (const p of filtered) {
       const period = p.period || "Undated";
       if (!byPeriod.has(period)) byPeriod.set(period, { period });
-      byPeriod.get(period)[shortName(p.field)] = Number(p.value) || 0;
+      byPeriod.get(period)[p.field || "—"] = Number(p.value) || 0;
     }
     const rank = (x) => (x === "Undated" ? "~~~" : String(x));
     return [...byPeriod.values()].sort((a, b) => rank(a.period).localeCompare(rank(b.period)));
   }, [filtered]);
 
   const fieldKeys = useMemo(() => {
-    // Top 5 fields by peak value — keeps ToC noise from drowning the chart.
+    // A specific metric wins; otherwise show up to 5 real-metric labels by peak
+    // value, so sentence/number headings don't drown the chart.
+    if (fieldFilter !== "ALL" && fieldOptions.includes(fieldFilter)) return [fieldFilter];
+    const meaningful = fieldOptions.filter(isMetricLabel);
+    const pool = meaningful.length ? meaningful : fieldOptions;
     const peak = new Map();
     for (const p of filtered) {
+      if (!p.field) continue;
       const v = Number(p.value) || 0;
-      const k = shortName(p.field);
-      if (v > (peak.get(k) || 0)) peak.set(k, v);
+      if (v > (peak.get(p.field) || 0)) peak.set(p.field, v);
     }
-    return [...peak.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k);
-  }, [filtered]);
+    return [...pool].sort((a, b) => (peak.get(b) || 0) - (peak.get(a) || 0)).slice(0, 5);
+  }, [fieldFilter, fieldOptions, filtered]);
 
   const compact = (v) =>
     Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`;
@@ -119,7 +162,7 @@ export default function Dashboard() {
             <div
               key={c.id}
               className="watch-row"
-              onClick={() => setSelected(c)}
+              onClick={() => pickCategory(c)}
               style={{ cursor: "pointer" }}
             >
               <div>
@@ -151,7 +194,7 @@ export default function Dashboard() {
               <div
                 key={c.id}
                 className="tile"
-                onClick={() => setSelected(c)}
+                onClick={() => pickCategory(c)}
                 style={{
                   cursor: "pointer",
                   borderColor: selected?.id === c.id ? "rgba(192,132,184,.6)" : undefined,
@@ -171,7 +214,18 @@ export default function Dashboard() {
         <div className="card">
           <h3>Performance {selected ? `— ${selected.name}` : ""}</h3>
           <p className="sub">Time series from approved data only</p>
-          <div className="tabs">
+          <div className="tabs" style={{ flexWrap: "wrap", alignItems: "center" }}>
+            <select
+              value={fieldFilter}
+              onChange={(e) => setFieldFilter(e.target.value)}
+              title="Choose which metric to chart"
+              style={{ width: "auto", minWidth: 200, padding: "7px 12px", borderRadius: 20 }}
+            >
+              <option value="ALL">All metrics (top 5)</option>
+              {fieldOptions.map((f) => (
+                <option key={f} value={f}>{shortName(f)}</option>
+              ))}
+            </select>
             {periods.map((p) => (
               <button
                 key={p}
@@ -189,34 +243,29 @@ export default function Dashboard() {
               </p>
             ) : (
             <ResponsiveContainer>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="g0" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#c084b8" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#c084b8" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} />
                 <XAxis dataKey="period" tick={{ fill: "#ab9cb9", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#ab9cb9", fontSize: 11 }} axisLine={false} tickLine={false} width={60} tickFormatter={compact} />
+                <YAxis tick={{ fill: "#ab9cb9", fontSize: 11 }} axisLine={false} tickLine={false} width={60} tickFormatter={compact} domain={["auto", "auto"]} />
                 <Tooltip
                   contentStyle={{ background: "#2c2138", border: "1px solid rgba(192,132,184,.4)", borderRadius: 12 }}
                   formatter={(v) => [Number(v).toLocaleString(), ""]}
                 />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
                 {fieldKeys.map((k, i) => (
-                  <Area
+                  <Line
                     key={k}
                     type="monotone"
                     dataKey={k}
+                    name={shortName(k)}
                     connectNulls
-                    stroke={i === 0 ? "#c084b8" : "#8b6cc1"}
-                    fill="url(#g0)"
-                    fillOpacity={i === 0 ? 1 : 0.25}
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: i === 0 ? "#c084b8" : "#8b6cc1" }}
+                    stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                    strokeWidth={2.5}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
                   />
                 ))}
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
             )}
           </div>

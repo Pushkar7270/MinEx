@@ -67,6 +67,14 @@ app:
     base-url: ${APP_FRONTEND_URL:http://localhost:3000}
   oauth:
     default-role: ${APP_OAUTH_DEFAULT_ROLE:DATA_CORRECTOR}
+  # Capabilities are derived from each role's numeric rank (see the roles table
+  # seeded by V2/V3 and the Rbac bean). Swapping in the real role taxonomy is a
+  # data + config change: update roles/ranks and tune these thresholds.
+  rbac:
+    correct-rank: ${APP_RBAC_CORRECT_RANK:10}
+    review-rank: ${APP_RBAC_REVIEW_RANK:20}
+    publish-rank: ${APP_RBAC_PUBLISH_RANK:30}
+    admin-rank: ${APP_RBAC_ADMIN_RANK:100}
 
 logging:
   level:

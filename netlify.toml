@@ -1,0 +1,15 @@
+# Netlify deploy config for the MinEx dashboard (static frontend only).
+# The Spring Boot API + Postgres/MinIO are NOT hosted by Netlify — set the API
+# URL in Netlify → Site configuration → Environment variables:
+#   VITE_API_URL = https://<your-backend-host>
+# ...and rebuild so the value is baked into the bundle.
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page app: all client-side routes fall through to index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
