@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
@@ -64,6 +65,7 @@ public class AuthController {
 
     /** Profile for the Discord-style header badge (name, role, color). */
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public Map<String, String> me(org.springframework.security.core.Authentication auth) {
         var user = users.findByEmailIgnoreCase(auth.getName()).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown user"));
@@ -80,6 +82,7 @@ public class AuthController {
     public record UpdateProfileRequest(@NotBlank String fullName) {}
 
     @PatchMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public Map<String, String> updateMe(org.springframework.security.core.Authentication auth,
                                         @Valid @RequestBody UpdateProfileRequest req) {
         var user = users.findByEmailIgnoreCase(auth.getName()).orElseThrow(
@@ -103,6 +106,7 @@ public class AuthController {
     }
 
     @GetMapping("/roles")
+    @PreAuthorize("isAuthenticated()")
     public java.util.List<Map<String, Object>> roles(org.springframework.security.core.Authentication auth) {
         // Hierarchy display (Discord-style): all roles ordered by rank.
         String mine = users.findByEmailIgnoreCase(auth.getName())

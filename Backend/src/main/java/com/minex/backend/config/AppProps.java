@@ -21,7 +21,7 @@ public class AppProps {
     @Setter
     public static class Jwt {
         private String secret;
-        private long accessTokenTtlMinutes = 60;
+        private long accessTokenTtlMinutes = 480; // 8h: survives a full demo day
         private long refreshTokenTtlDays = 7;
     }
 

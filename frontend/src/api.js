@@ -30,8 +30,19 @@ async function req(path, opts = {}) {
       ...(opts.headers || {}),
     },
   });
-  if (res.status === 401 || res.status === 403) {
-    const err = new Error("Not authorized for your role");
+  if (res.status === 401) {
+    // Session expired: back to sign-in, no cryptic errors.
+    if (!window.location.pathname.startsWith("/login")) {
+      clearToken();
+      window.location.href = "/login";
+    }
+    const err = new Error("Session expired — please sign in again");
+    err.status = res.status;
+    throw err;
+  }
+  if (res.status === 403) {
+    // Valid session, insufficient role: stay logged in, explain.
+    const err = new Error("Not permitted for your role");
     err.status = res.status;
     throw err;
   }
