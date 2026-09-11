@@ -39,9 +39,11 @@ public class OpenAiCompatibleLlmClassifier implements LlmClassifier {
 
     @Override
     public Optional<LlmResult> classify(String text, List<String> categories) {
-        String prompt = "Classify this mining-report figure into exactly one category from: "
+        String prompt = "You sort mining-report figures into categories. Existing categories: "
                 + String.join(", ", categories)
-                + ". Reply with JSON only: {\"category\": \"<name>\", \"confidence\": 0.0-1.0}. Figure: " + text;
+                + ". If one fits, use it with \"new\": false. Otherwise propose a concise new "
+                + "category name (2-4 words) with \"new\": true. Reply with JSON only: "
+                + "{\"category\": \"<name>\", \"confidence\": 0.0-1.0, \"new\": true/false}. Figure: " + text;
         try {
             String body = client.post().uri("/chat/completions")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -54,13 +56,7 @@ public class OpenAiCompatibleLlmClassifier implements LlmClassifier {
             int end = content.lastIndexOf('}');
             if (start < 0 || end <= start) return Optional.empty();
             JsonNode answer = mapper.readTree(content.substring(start, end + 1));
-            String category = answer.path("category").asText(null);
-            double confidence = answer.path("confidence").asDouble(0);
-            if (category == null || !categories.contains(category)
-                    || confidence < props.getLlm().getMinConfidence()) {
-                return Optional.empty();
-            }
-            return Optional.of(new LlmResult(category, confidence));
+            return LlmClassifier.accept(answer, categories, props.getLlm().getMinConfidence());
         } catch (Exception ex) {
             log.warn("Hosted LLM classification failed, leaving figure for human review: {}", ex.getMessage());
             return Optional.empty();

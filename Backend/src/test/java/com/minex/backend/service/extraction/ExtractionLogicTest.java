@@ -88,6 +88,31 @@ class ExtractionLogicTest {
         assertTrue(withUnsureLlm.categorize("Output value 42").isEmpty());
     }
 
+    @Test
+    void taxonomyExtendsItselfOnConfidentNewProposal() {
+        var cats = new java.util.HashMap<>(Map.of("Annual Yield", cat("Annual Yield")));
+        LlmClassifier proposer = (text, categories) -> java.util.Optional.of(
+                new LlmClassifier.LlmResult("Community Welfare", 0.9, true));
+        var ext = new CategorizerService(cats, proposer);
+        var created = ext.categorize("Scholarships awarded 120").orElseThrow();
+        assertEquals("Community Welfare", created.getName());
+        assertTrue(cats.containsKey("Community Welfare"));
+    }
+
+    @Test
+    void unknownNameWithoutNewFlagIsRejected() {
+        var cats = Map.of("Annual Yield", cat("Annual Yield"));
+        LlmClassifier liar = (text, categories) -> java.util.Optional.of(
+                new LlmClassifier.LlmResult("Nonsense Bucket", 0.9, false));
+        var ext = new CategorizerService(cats, liar);
+        assertTrue(ext.categorize("Scholarships awarded 120").isEmpty());
+    }
+
+    @Test
+    void categoryNamesAreNormalized() {
+        assertEquals("Community Welfare", LlmClassifier.normalize("  community   WELFARE "));
+    }
+
     private static Category cat(String name) {
         Category c = new Category();
         c.setName(name);

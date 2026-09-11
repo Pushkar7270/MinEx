@@ -41,9 +41,11 @@ public class OllamaLlmClassifier implements LlmClassifier {
 
     @Override
     public Optional<LlmResult> classify(String text, List<String> categories) {
-        String prompt = "Classify this mining-report figure into exactly one category from: "
+        String prompt = "You sort mining-report figures into categories. Existing categories: "
                 + String.join(", ", categories)
-                + ". Reply with JSON only: {\"category\": \"<name>\", \"confidence\": 0.0-1.0}. Figure: " + text;
+                + ". If one fits, use it with \"new\": false. Otherwise propose a concise new "
+                + "category name (2-4 words) with \"new\": true. Reply with JSON only: "
+                + "{\"category\": \"<name>\", \"confidence\": 0.0-1.0, \"new\": true/false}. Figure: " + text;
         try {
             String body = client.post().uri("/api/chat")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -55,21 +57,14 @@ public class OllamaLlmClassifier implements LlmClassifier {
             Matcher m = JSON.matcher(content);
             if (!m.find()) return Optional.empty();
             JsonNode answer = mapper.readTree(m.group());
-            String category = answer.path("category").asText(null);
-            double confidence = answer.path("confidence").asDouble(0);
-            if (category == null || !categories.contains(category)
-                    || confidence < props.getLlm().getMinConfidence()) {
-                return Optional.empty();
-            }
-            return Optional.of(new LlmResult(category, confidence));
+            return LlmClassifier.accept(answer, categories, props.getLlm().getMinConfidence());
         } catch (Exception ex) {
             log.warn("Ollama classification failed, leaving figure for human review: {}", ex.getMessage());
             return Optional.empty();
         }
     }
 
-    /** Timeout guard, for tests. */
-    RestClient clientWithTimeout() {
+    /** Timeout guard, for tests. */    RestClient clientWithTimeout() {
         return RestClient.builder().baseUrl(props.getLlm().getEndpoint())
                 .requestFactory(new org.springframework.http.client.SimpleClientHttpRequestFactory() {
                     {
