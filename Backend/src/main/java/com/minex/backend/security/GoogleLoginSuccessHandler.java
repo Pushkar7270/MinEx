@@ -49,7 +49,11 @@ public class GoogleLoginSuccessHandler implements AuthenticationSuccessHandler {
 
         AppUser user = users.findByProviderAndProviderSubject("google", subject)
                 .or(() -> users.findByEmailIgnoreCase(email))
-                .orElseGet(() -> createUser(email, oidc.getFullName()));
+                .orElse(null);
+        boolean firstTime = (user == null);
+        if (firstTime) {
+            user = createUser(email, oidc.getFullName());
+        }
 
         // Link Google identity on first Google login for password-era accounts.
         if (user.getProviderSubject() == null) {
@@ -60,7 +64,8 @@ public class GoogleLoginSuccessHandler implements AuthenticationSuccessHandler {
 
         String token = jwt.generateAccessToken(
                 user.getEmail(), Map.of("role", user.getRole().getName()));
-        response.sendRedirect(frontendBaseUrl + "/oauth/callback?token=" + token);
+        response.sendRedirect(frontendBaseUrl + "/oauth/callback?token=" + token
+                + (firstTime ? "&newUser=true" : ""));
     }
 
     private AppUser createUser(String email, String name) {

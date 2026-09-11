@@ -6,12 +6,19 @@ export default function Layout({ onToast }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({ email: emailFromToken(), role: roleFromToken(), roleColor: "#8b6cc1" });
   const [hierarchy, setHierarchy] = useState([]);
+  const [showProfile, setShowProfile] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState("");
+
+  const reloadProfile = () => {
+    api.me().then(setProfile).catch(() => {});
+    api.roleList().then(setHierarchy).catch(() => {});
+  };
   const initials = (profile.email || "?").slice(0, 2).toUpperCase();
 
   useEffect(() => {
     // Discord-style profile: role color + full hierarchy from the server.
-    api.me().then(setProfile).catch(() => {});
-    api.roleList().then(setHierarchy).catch(() => {});
+    reloadProfile();
   }, []);
 
   const logout = () => {
@@ -39,7 +46,7 @@ export default function Layout({ onToast }) {
         </NavLink>
         {hierarchy.length > 0 && (
           <div className="roles-block">
-            <div className="roles-title">ROLES — HIGH TO LOW</div>
+            <div className="roles-title">ROLES</div>
             {hierarchy.map((r) => (
               <div key={r.name} className={"role-row" + (r.mine ? " mine" : "")}>
                 <span className="role-dot" style={{ background: r.color }} />
@@ -80,10 +87,68 @@ export default function Layout({ onToast }) {
                 {profile.role?.replace(/_/g, " ")}
               </span>
             </div>
-            <div className="avatar">{initials}</div>
+            <button className="avatar-btn" onClick={() => setShowProfile(true)} title="View profile">
+              <div className="avatar">{initials}</div>
+            </button>
           </div>
         </div>
         <Outlet />
+        {showProfile && (
+          <div className="modal-overlay" onClick={() => setShowProfile(false)}>
+            <div className="profile-card" onClick={(e) => e.stopPropagation()}>
+              <div className="profile-banner" />
+              <button className="modal-x" onClick={() => setShowProfile(false)}>✕</button>
+              <div className="profile-head">
+                <div className="avatar big">{initials}</div>
+                <div>
+                  {editingName ? (
+                    <div className="inline-edit">
+                      <input
+                        value={draftName}
+                        maxLength={80}
+                        onChange={(e) => setDraftName(e.target.value)}
+                      />
+                      <button
+                        className="btn small"
+                        onClick={async () => {
+                          try {
+                            await api.updateMe(draftName.strip());
+                            setEditingName(false);
+                            reloadProfile();
+                            onToast("Display name updated");
+                          } catch (e) {
+                            onToast(e.message);
+                          }
+                        }}
+                      >Save</button>
+                    </div>
+                  ) : (
+                    <div className="profile-name">
+                      {profile.fullName || profile.email}{" "}
+                      <button
+                        className="link-btn"
+                        onClick={() => {
+                          setDraftName(profile.fullName || "");
+                          setEditingName(true);
+                        }}
+                      >✎</button>
+                    </div>
+                  )}
+                  <div className="muted">{profile.email}</div>
+                  <span className="pill">{profile.provider === "google" ? "Google account" : "Local account"}</span>
+                </div>
+              </div>
+              <div className="roles-title" style={{ marginTop: 14 }}>ROLES</div>
+              {hierarchy.map((r) => (
+                <div key={r.name} className={"role-row" + (r.mine ? " mine" : "")}>
+                  <span className="role-dot" style={{ background: r.color }} />
+                  <span className="role-name">{r.name.replace(/_/g, " ")}</span>
+                  {r.mine && <span className="soon-badge">you</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

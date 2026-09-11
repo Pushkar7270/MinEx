@@ -2,6 +2,7 @@ package com.minex.backend.web;
 
 import com.minex.backend.repo.RoleRepository;
 import com.minex.backend.repo.UserRepository;
+import com.minex.backend.service.AuditService;
 import com.minex.backend.security.JwtService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -26,16 +27,18 @@ public class AuthController {
     private final JwtService jwt;
     private final UserRepository users;
     private final RoleRepository roles;
+    private final AuditService audit;
 
     @Value("${GOOGLE_CLIENT_ID:}")
     private String googleClientId;
 
     public AuthController(AuthenticationManager authManager, JwtService jwt, UserRepository users,
-                          RoleRepository roles) {
+                          RoleRepository roles, AuditService audit) {
         this.authManager = authManager;
         this.jwt = jwt;
         this.users = users;
         this.roles = roles;
+        this.audit = audit;
     }
 
     public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}
@@ -73,7 +76,25 @@ public class AuthController {
                 "provider", user.getProvider() == null ? "local" : user.getProvider());
     }
 
-    /** Tells the login page whether Google Sign-In is configured. */
+    /** First-time (and later) display-name setup — own profile only, never roles. */
+    public record UpdateProfileRequest(@NotBlank String fullName) {}
+
+    @PatchMapping("/me")
+    public Map<String, String> updateMe(org.springframework.security.core.Authentication auth,
+                                        @Valid @RequestBody UpdateProfileRequest req) {
+        var user = users.findByEmailIgnoreCase(auth.getName()).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown user"));
+        String name = req.fullName().strip();
+        if (name.length() > 80) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name too long (max 80)");
+        }
+        String old = "{\"fullName\":\"" + user.getFullName() + "\"}";
+        user.setFullName(name);
+        users.save(user);
+        audit.logAs(user, "USER_PROFILE_UPDATED", "user", user.getId(),
+                old, "{\"fullName\":\"" + name + "\"}");
+        return Map.of("email", user.getEmail(), "fullName", user.getFullName());
+    }
     @GetMapping("/providers")
     public Map<String, Object> providers() {
         return Map.of(

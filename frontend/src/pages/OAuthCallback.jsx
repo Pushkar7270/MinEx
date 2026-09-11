@@ -11,7 +11,7 @@ export default function OAuthCallback() {
     const token = params.get("token");
     if (token) {
       setToken(token);
-      navigate("/", { replace: true });
+      navigate(params.get("newUser") ? "/welcome" : "/", { replace: true });
     } else {
       navigate("/login", { replace: true });
     }

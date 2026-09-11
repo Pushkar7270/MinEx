@@ -41,6 +41,12 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleMalformed(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        return body(HttpStatus.BAD_REQUEST, "Malformed request body");
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         log.error("Unhandled API error", ex);

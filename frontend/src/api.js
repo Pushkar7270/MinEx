@@ -60,6 +60,8 @@ export const api = {
     req("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   providers: () => req("/api/v1/auth/providers"),
   me: () => req("/api/v1/auth/me"),
+  updateMe: (fullName) =>
+    req("/api/v1/auth/me", { method: "PATCH", body: JSON.stringify({ fullName }) }),
   roleList: () => req("/api/v1/auth/roles"),
   summary: () => req("/api/v1/dashboard/summary"),
   timeseries: (id, from, to) => {

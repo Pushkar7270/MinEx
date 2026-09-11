@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import ReviewQueue from "./pages/ReviewQueue";
 import Login from "./pages/Login";
 import OAuthCallback from "./pages/OAuthCallback";
+import Welcome from "./pages/Welcome";
 import { ChatSoon, DraftsSoon } from "./pages/ComingSoon";
 import { getToken } from "./api";
 
@@ -25,6 +26,14 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+        <Route
+          path="/welcome"
+          element={
+            <Protected>
+              <Welcome onToast={showToast} />
+            </Protected>
+          }
+        />
         <Route
           element={
             <Protected>
