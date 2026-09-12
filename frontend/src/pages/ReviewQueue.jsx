@@ -121,6 +121,11 @@ export default function ReviewQueue({ onToast }) {
           Figures awaiting a decision — correct, then approve/publish. Signed in as <b>{role || "…"}</b>.
           {!canReview && " Your role can submit corrections; approval needs a reviewer."}
         </p>
+        <div className="row-btns" style={{ margin: "2px 0 12px" }}>
+          <span className="pill prio-pill critical">Red · human verification required</span>
+          <span className="pill prio-pill review">Yellow · check if unsure</span>
+          <span className="pill prio-pill ok">Green · low risk</span>
+        </div>
         <table className="data">
           <thead>
             <tr><th>Field</th><th>Value</th><th>Category</th><th>Period</th><th>Conf.</th><th>Status</th><th>Correct</th><th>Decision</th></tr>
@@ -130,12 +135,15 @@ export default function ReviewQueue({ onToast }) {
               const pending = r.status === "pending_review";
               const approved = r.status === "approved";
               return (
-              <tr key={r.id}>
+              <tr key={r.id} className={"prio-" + (r.priority || "review")}>
                 <td>{r.fieldName}</td>
                 <td><b>{r.fieldValue ?? r.fieldText}</b> <span className="muted">{r.unit}</span></td>
                 <td className="muted">{r.category || "—"}</td>
                 <td className="muted">{r.period || "—"}</td>
-                <td className="muted">{Math.round(r.confidenceScore * 100)}%</td>
+                <td>
+                  <span className={"prio-dot " + (r.priority || "review")} />
+                  <span className="muted">{Math.round(r.confidenceScore * 100)}%</span>
+                </td>
                 <td><span className="pill">{r.status} · v{r.version}</span></td>
                 <td>
                   <div className="inline-edit">

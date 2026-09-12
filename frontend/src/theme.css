@@ -203,6 +203,18 @@ button.nav-item:hover { background: rgba(255,255,255,.05); color: var(--text); }
 table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.data th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; padding: 8px; border-bottom: 1px solid var(--line); }
 table.data td { padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; }
+
+/* Review-queue priority bands (mirror app.extraction confidence thresholds) */
+tr.prio-critical { background: rgba(240,139,176,.13); }
+tr.prio-review { background: rgba(227,179,65,.10); }
+tr.prio-ok { background: rgba(125,219,163,.07); }
+.prio-pill.critical { color: var(--bad); border-color: rgba(240,139,176,.5); }
+.prio-pill.review { color: #e3b341; border-color: rgba(227,179,65,.5); }
+.prio-pill.ok { color: var(--good); border-color: rgba(125,219,163,.5); }
+.prio-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.prio-dot.critical { background: var(--bad); }
+.prio-dot.review { background: #e3b341; }
+.prio-dot.ok { background: var(--good); }
 input, select {
   background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--text);
   border-radius: 10px; padding: 9px 12px; font-size: 13px; width: 100%;

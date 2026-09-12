@@ -50,6 +50,7 @@ app:
     allowed-mime-types: application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,image/jpeg,image/png,application/zip
   extraction:
     confidence-threshold: 0.75
+    low-confidence-threshold: ${APP_EXTRACTION_LOW_CONFIDENCE:0.5}
   llm:
     provider: ${APP_LLM_PROVIDER:none}          # none | ollama | openai-compatible
     endpoint: ${APP_LLM_ENDPOINT:http://localhost:11434}

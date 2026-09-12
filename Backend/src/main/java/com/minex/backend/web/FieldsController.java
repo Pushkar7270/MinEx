@@ -1,5 +1,6 @@
 package com.minex.backend.web;
 
+import com.minex.backend.config.AppProps;
 import com.minex.backend.domain.ExtractedField;
 import com.minex.backend.service.CurrentUserService;
 import com.minex.backend.service.FieldReviewService;
@@ -16,22 +17,31 @@ import org.springframework.web.bind.annotation.*;
 public class FieldsController {
     private final FieldReviewService review;
     private final CurrentUserService currentUser;
+    private final AppProps props;
 
-    public FieldsController(FieldReviewService review, CurrentUserService currentUser) {
+    public FieldsController(FieldReviewService review, CurrentUserService currentUser, AppProps props) {
         this.review = review;
         this.currentUser = currentUser;
+        this.props = props;
     }
 
     public record FieldResponse(UUID id, UUID documentId, String category, String period,
                                 String fieldName, Double fieldValue, String fieldText, String unit,
-                                double confidenceScore, boolean needsReview, String status, int version) {
-        static FieldResponse of(ExtractedField f) {
+                                double confidenceScore, boolean needsReview, String status, int version,
+                                String priority) {
+        static FieldResponse of(ExtractedField f, AppProps props) {
+            double low = props.getExtraction().getLowConfidenceThreshold();
+            double high = props.getExtraction().getConfidenceThreshold();
+            // Review-triage priority: how much human intervention this row needs.
+            String priority = (f.getCategory() == null || f.getConfidenceScore() < low) ? "critical"
+                    : (f.getConfidenceScore() < high) ? "review"
+                    : "ok";
             return new FieldResponse(f.getId(),
                     f.getDocument() == null ? null : f.getDocument().getId(),
                     f.getCategory() == null ? null : f.getCategory().getName(),
                     f.getPeriod(), f.getFieldName(), f.getFieldValue(), f.getFieldText(),
                     f.getUnit(), f.getConfidenceScore(), f.isNeedsReview(),
-                    f.getStatus(), f.getVersion());
+                    f.getStatus(), f.getVersion(), priority);
         }
     }
 
@@ -41,7 +51,7 @@ public class FieldsController {
     @PreAuthorize("isAuthenticated()")
     public Page<FieldResponse> reviewQueue(@PathVariable("id") UUID documentId, Pageable pageable) {
         return review.reviewQueue(documentId, currentUser.requireCurrentUser(), pageable)
-                .map(FieldResponse::of);
+                .map(f -> FieldResponse.of(f, props));
     }
 
     @PatchMapping("/api/v1/fields/{id}")
@@ -49,25 +59,25 @@ public class FieldsController {
     @PreAuthorize("@rbac.canCorrect()")
     public FieldResponse correct(@PathVariable UUID id, @RequestBody CorrectionRequest req) {
         return FieldResponse.of(review.correct(id, req.fieldValue(), req.fieldText(), req.category(),
-                currentUser.requireCurrentUser()));
+                currentUser.requireCurrentUser()), props);
     }
 
     @PostMapping("/api/v1/fields/{id}/approve")
     @PreAuthorize("@rbac.canReview()")
     public FieldResponse approve(@PathVariable UUID id) {
-        return FieldResponse.of(review.approve(id, currentUser.requireCurrentUser()));
+        return FieldResponse.of(review.approve(id, currentUser.requireCurrentUser()), props);
     }
 
     @PostMapping("/api/v1/fields/{id}/reject")
     @PreAuthorize("@rbac.canReview()")
     public FieldResponse reject(@PathVariable UUID id) {
-        return FieldResponse.of(review.reject(id, currentUser.requireCurrentUser()));
+        return FieldResponse.of(review.reject(id, currentUser.requireCurrentUser()), props);
     }
 
     @PostMapping("/api/v1/fields/{id}/publish")
     @PreAuthorize("@rbac.canPublish()")
     public FieldResponse publish(@PathVariable UUID id) {
         // Method security is the coarse gate; FieldReviewService re-checks rank + four-eyes.
-        return FieldResponse.of(review.publish(id, currentUser.requireCurrentUser()));
+        return FieldResponse.of(review.publish(id, currentUser.requireCurrentUser()), props);
     }
 }

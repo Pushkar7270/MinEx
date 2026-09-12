@@ -37,6 +37,8 @@ public class AppProps {
     @Setter
     public static class Extraction {
         private double confidenceThreshold = 0.75;
+        /** Below this, human verification is mandatory (red priority). */
+        private double lowConfidenceThreshold = 0.5;
     }
 
     @Getter

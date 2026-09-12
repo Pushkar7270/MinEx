@@ -2,6 +2,7 @@ package com.minex.backend.service.extraction;
 
 import com.minex.backend.domain.Category;
 import com.minex.backend.repo.CategoryRepository;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -69,24 +70,32 @@ public class CategorizerService {
 
     public Optional<Category> categorize(String text) {
         if (text == null || text.isBlank()) return Optional.empty();
-        String lower = text.toLowerCase(Locale.ROOT);
-        String best = null;
-        int bestScore = 0;
-        for (var entry : RULES.entrySet()) {
-            int score = 0;
-            for (String keyword : entry.getValue()) {
-                if (lower.contains(keyword)) score += keyword.contains(" ") ? 3 : 1;
-            }
-            if (score > bestScore) {
-                bestScore = score;
-                best = entry.getKey();
-            }
+
+        // Rule pass: score every rule category, then decide via Shannon entropy
+        // over the softmax of those scores. Low entropy => one category clearly
+        // dominates => trust the rule. High entropy => ambiguous => ask the LLM.
+        List<String> names = new ArrayList<>(RULES.keySet());
+        List<Integer> scores = new ArrayList<>(names.size());
+        int bestIdx = 0;
+        for (int i = 0; i < names.size(); i++) {
+            int s = score(names.get(i), text);
+            scores.add(s);
+            if (s > scores.get(bestIdx)) bestIdx = i;
         }
-        // Confident rule hit (a multi-word keyword, or 2+ keyword hits):
-        // trust it, no LLM call.
-        if (best != null && bestScore >= 2) {
-            return Optional.ofNullable(byName.get(best));
+        double[] probs = softmax(scores);
+        double h = entropy(probs);
+        double hMax = Math.log(names.size());
+        int best = scores.get(bestIdx);
+        long tiedAtBest = scores.stream().filter(s -> s == best).count();
+        // Relaxed gate: trust the rule when one category is the unique winner
+        // (e.g. a single decisive domain keyword like "overburden"), as well as
+        // when the distribution is low-entropy. A tie still goes to the LLM.
+        boolean clearWinner = best > 0 && tiedAtBest == 1;
+        if (best > 0 && (clearWinner || h < 0.5 * hMax)) {
+            Category chosen = byName.get(names.get(bestIdx));
+            if (chosen != null) return Optional.of(chosen);
         }
+
         // Ambiguous: ask the LLM (no-op when provider=none). Known names map
         // directly; genuinely new names are adopted into the taxonomy.
         // Anything else stays with a human reviewer.
@@ -96,6 +105,28 @@ public class CategorizerService {
             if (result.newlyProposed()) return Optional.of(creator.apply(result.category()));
             return Optional.empty();
         });
+    }
+
+    /** Numerically-stable softmax over the per-category keyword scores. */
+    private static double[] softmax(List<Integer> scores) {
+        int max = scores.stream().mapToInt(Integer::intValue).max().orElse(0);
+        double sum = 0;
+        double[] out = new double[scores.size()];
+        for (int i = 0; i < scores.size(); i++) {
+            out[i] = Math.exp(scores.get(i) - max);
+            sum += out[i];
+        }
+        for (int i = 0; i < out.length; i++) out[i] /= sum;
+        return out;
+    }
+
+    /** Shannon entropy H = -Σ p·log(p). */
+    private static double entropy(double[] probs) {
+        double h = 0;
+        for (double p : probs) {
+            if (p > 0) h -= p * Math.log(p);
+        }
+        return h;
     }
 
     /** Score only, for tests. */
