@@ -131,7 +131,7 @@ export default function Dashboard() {
       <div className="tabs">
         <button className="tab active">Overview</button>
         <button className="tab" onClick={() => navigate("/review")}>Review Queue</button>
-        <button className="tab" onClick={() => navigate("/chat")}>AI Chat · Soon</button>
+        <button className="tab" onClick={() => navigate("/chat")}>AI Chat</button>
       </div>
       <div className="grid-3">
         <div className="card hero">

@@ -6,7 +6,8 @@ import ReviewQueue from "./pages/ReviewQueue";
 import Login from "./pages/Login";
 import OAuthCallback from "./pages/OAuthCallback";
 import Welcome from "./pages/Welcome";
-import { ChatSoon, DraftsSoon } from "./pages/ComingSoon";
+import Chat from "./pages/Chat";
+import { DraftsSoon } from "./pages/ComingSoon";
 import { getToken } from "./api";
 
 function Protected({ children }) {
@@ -43,7 +44,7 @@ export default function App() {
         >
           <Route path="/" element={<Dashboard />} />
           <Route path="/review" element={<ReviewQueue onToast={showToast} />} />
-          <Route path="/chat" element={<ChatSoon onToast={showToast} />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="/drafts" element={<DraftsSoon onToast={showToast} />} />
         </Route>
       </Routes>

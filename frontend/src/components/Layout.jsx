@@ -44,7 +44,7 @@ export default function Layout({ onToast }) {
           <span>▤</span> Review Queue
         </NavLink>
         <NavLink to="/chat" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
-          <span>✦</span> AI Chat <span className="soon-badge">Soon</span>
+          <span>✦</span> AI Chat
         </NavLink>
         <NavLink to="/drafts" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
           <span>📄</span> Drafts <span className="soon-badge">Soon</span>

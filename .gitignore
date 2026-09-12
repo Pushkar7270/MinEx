@@ -1,3 +1,7 @@
 # Local secrets & environment (never commit). See .env.example for the template.
 .env
 *.local
+
+# Python
+__pycache__/
+*.pyc

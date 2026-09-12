@@ -69,6 +69,28 @@ services:
       minio:
         condition: service_started
 
+  # Phase 2 — RAG chatbot (PRD §5). Reads only approved/published figures.
+  # Fully isolated: owns its own tables, Phase 1 service is untouched.
+  chatbot-service:
+    build:
+      context: ./services/chatbot-service
+      dockerfile: Dockerfile
+    container_name: intellireport-chatbot
+    environment:
+      DATABASE_URL: postgresql://intellireport:intellireport@postgres:5432/intellireport
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-change-me-to-a-256-bit-secret-for-local-dev-only-0123456789}
+      APP_LLM_PROVIDER: ${APP_LLM_PROVIDER:-none}
+      APP_LLM_ENDPOINT: ${APP_LLM_ENDPOINT:-http://localhost:11434}
+      APP_LLM_MODEL: ${APP_LLM_MODEL:-llama3.1:8b}
+      APP_LLM_API_KEY: ${APP_LLM_API_KEY:-}
+      APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      CHAT_EMBEDDER: ${CHAT_EMBEDDER:-hash}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Dashboard (React). Browser calls the API directly, so CORS allows port 3000.
   frontend:
     build:
@@ -76,11 +98,13 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        VITE_CHAT_URL: ${VITE_CHAT_URL:-http://localhost:8000}
     container_name: intellireport-frontend
     ports:
       - "3000:80"
     depends_on:
       - ingestion-service
+      - chatbot-service
 
 volumes:
   pgdata:

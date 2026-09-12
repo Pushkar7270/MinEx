@@ -1,4 +1,6 @@
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+// Phase 2 RAG chatbot is a separate service (PRD §5), so it gets its own base URL.
+const CHAT_BASE = import.meta.env.VITE_CHAT_URL || "http://localhost:8000";
 
 export const getToken = () => localStorage.getItem("minex_token");
 export const setToken = (t) => localStorage.setItem("minex_token", t);
@@ -65,6 +67,21 @@ async function uploadDoc(file) {
 }
 
 export const apiBase = BASE;
+export const chatBase = CHAT_BASE;
+
+async function chatReq(path, opts = {}) {
+  const res = await fetch(CHAT_BASE + path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+      ...(opts.headers || {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || data.message || `Chat request failed (${res.status})`);
+  return data;
+}
 
 export const api = {
   login: (email, password) =>
@@ -97,4 +114,13 @@ export const api = {
   listUsers: (page = 0, size = 50) => req(`/api/v1/users?page=${page}&size=${size}`),
   changeRole: (id, role) =>
     req(`/api/v1/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
+
+  // Phase 2 — RAG chatbot (separate FastAPI service).
+  chatQuery: (message, sessionId) =>
+    chatReq("/api/v2/chat/query", {
+      method: "POST",
+      body: JSON.stringify({ message, session_id: sessionId || null }),
+    }),
+  chatSession: (id) => chatReq(`/api/v2/chat/sessions/${id}`),
+  chatReindex: () => chatReq("/api/v2/chat/index", { method: "POST" }),
 };
