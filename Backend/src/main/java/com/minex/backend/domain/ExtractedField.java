@@ -56,7 +56,7 @@ public class ExtractedField {
     @JoinColumn(name = "created_by")
     private AppUser createdBy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "reviewed_by")
     private AppUser reviewedBy;
 

@@ -28,7 +28,7 @@ public class FieldsController {
     public record FieldResponse(UUID id, UUID documentId, String category, String period,
                                 String fieldName, Double fieldValue, String fieldText, String unit,
                                 double confidenceScore, boolean needsReview, String status, int version,
-                                String priority) {
+                                String priority, String reviewedBy) {
         static FieldResponse of(ExtractedField f, AppProps props) {
             double low = props.getExtraction().getLowConfidenceThreshold();
             double high = props.getExtraction().getConfidenceThreshold();
@@ -41,7 +41,8 @@ public class FieldsController {
                     f.getCategory() == null ? null : f.getCategory().getName(),
                     f.getPeriod(), f.getFieldName(), f.getFieldValue(), f.getFieldText(),
                     f.getUnit(), f.getConfidenceScore(), f.isNeedsReview(),
-                    f.getStatus(), f.getVersion(), priority);
+                    f.getStatus(), f.getVersion(), priority,
+                    f.getReviewedBy() == null ? null : f.getReviewedBy().getEmail());
         }
     }
 
@@ -49,8 +50,10 @@ public class FieldsController {
 
     @GetMapping("/api/v1/documents/{id}/review-queue")
     @PreAuthorize("isAuthenticated()")
-    public Page<FieldResponse> reviewQueue(@PathVariable("id") UUID documentId, Pageable pageable) {
-        return review.reviewQueue(documentId, currentUser.requireCurrentUser(), pageable)
+    public Page<FieldResponse> reviewQueue(@PathVariable("id") UUID documentId,
+                                           @RequestParam(required = false, defaultValue = "pending_review") String status,
+                                           Pageable pageable) {
+        return review.reviewQueue(documentId, currentUser.requireCurrentUser(), status, pageable)
                 .map(f -> FieldResponse.of(f, props));
     }
 
@@ -72,6 +75,12 @@ public class FieldsController {
     @PreAuthorize("@rbac.canReview()")
     public FieldResponse reject(@PathVariable UUID id) {
         return FieldResponse.of(review.reject(id, currentUser.requireCurrentUser()), props);
+    }
+
+    @PostMapping("/api/v1/fields/{id}/reopen")
+    @PreAuthorize("@rbac.canReview()")
+    public FieldResponse reopen(@PathVariable UUID id) {
+        return FieldResponse.of(review.reopen(id, currentUser.requireCurrentUser()), props);
     }
 
     @PostMapping("/api/v1/fields/{id}/publish")

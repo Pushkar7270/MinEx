@@ -50,7 +50,8 @@ public class FieldReviewService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ExtractedField> reviewQueue(UUID documentId, AppUser viewer, Pageable pageable) {
+    public Page<ExtractedField> reviewQueue(UUID documentId, AppUser viewer, String status, Pageable pageable) {
+        String wanted = (status == null || status.isBlank()) ? "pending_review" : status;
         documents.get(documentId, viewer); // access check
         // The queue is every figure awaiting a decision (pending_review) — not just
         // the machine-flagged ones. A correction produces a new version with
@@ -69,7 +70,7 @@ public class FieldReviewService {
         }
         List<ExtractedField> distinct = new ArrayList<>();
         for (ExtractedField f : latest.values()) {
-            if ("pending_review".equals(f.getStatus())) {
+            if (wanted.equals(f.getStatus())) {
                 distinct.add(f);
             }
         }
@@ -78,6 +79,12 @@ public class FieldReviewService {
         int offset = (int) Math.min(pageable.getOffset(), distinct.size());
         int end = Math.min(offset + pageable.getPageSize(), distinct.size());
         return new PageImpl<>(distinct.subList(offset, end), pageable, distinct.size());
+    }
+
+    /** Backwards-compatible overload: the pending review queue. */
+    @Transactional(readOnly = true)
+    public Page<ExtractedField> reviewQueue(UUID documentId, AppUser viewer, Pageable pageable) {
+        return reviewQueue(documentId, viewer, "pending_review", pageable);
     }
 
     /** Version wins; UUID breaks exact ties so the winner is deterministic. */
@@ -134,6 +141,25 @@ public class FieldReviewService {
         }
         checkMayApprove(approver, field);
         transition(field, approver, "rejected", "FIELD_REJECTED");
+        return field;
+    }
+
+    /**
+     * Undo an accidental rejection: returns a rejected figure to pending_review.
+     * Only the reviewer who rejected it may restore it (avoid silently reversing
+     * another person's decision). Every restore is audit-logged.
+     */
+    @Transactional
+    public ExtractedField reopen(UUID fieldId, AppUser actor) {
+        ExtractedField field = require(fieldId);
+        if (!"rejected".equals(field.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only rejected fields can be restored");
+        }
+        if (field.getReviewedBy() == null || !field.getReviewedBy().getId().equals(actor.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only the reviewer who rejected this figure can restore it");
+        }
+        transition(field, actor, "pending_review", "FIELD_REOPENED");
         return field;
     }
 

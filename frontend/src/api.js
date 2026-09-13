@@ -101,8 +101,8 @@ export const api = {
   },
   documents: (page = 0, size = 20) => req(`/api/v1/documents?page=${page}&size=${size}`),
   upload: uploadDoc,
-  reviewQueue: (docId, page = 0, size = 50) =>
-    req(`/api/v1/documents/${docId}/review-queue?page=${page}&size=${size}`),
+  reviewQueue: (docId, page = 0, size = 50, status = "pending_review") =>
+    req(`/api/v1/documents/${docId}/review-queue?page=${page}&size=${size}&status=${status}`),
   correct: (id, fieldValue, fieldText, category) =>
     req(`/api/v1/fields/${id}`, {
       method: "PATCH",
@@ -110,6 +110,7 @@ export const api = {
     }),
   approve: (id) => req(`/api/v1/fields/${id}/approve`, { method: "POST" }),
   reject: (id) => req(`/api/v1/fields/${id}/reject`, { method: "POST" }),
+  reopen: (id) => req(`/api/v1/fields/${id}/reopen`, { method: "POST" }),
   publish: (id) => req(`/api/v1/fields/${id}/publish`, { method: "POST" }),
   listUsers: (page = 0, size = 50) => req(`/api/v1/users?page=${page}&size=${size}`),
   changeRole: (id, role) =>

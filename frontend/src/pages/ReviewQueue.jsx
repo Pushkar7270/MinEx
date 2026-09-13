@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 
 export default function ReviewQueue({ onToast }) {
@@ -8,10 +8,13 @@ export default function ReviewQueue({ onToast }) {
   const canPublish = !!me?.canPublish;
   const [docs, setDocs] = useState([]);
   const [docId, setDocId] = useState("");
+  const [tab, setTab] = useState("pending_review");
   const [rows, setRows] = useState([]);
   const [error, setError] = useState("");
   const [file, setFile] = useState(null);
   const [edit, setEdit] = useState({});
+  const [lastRejected, setLastRejected] = useState(null);
+  const undoTimer = useRef(null);
 
   useEffect(() => {
     api.me().then(setMe).catch(() => {});
@@ -28,17 +31,25 @@ export default function ReviewQueue({ onToast }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!docId) return;
-    api
-      .reviewQueue(docId, 0, 50)
+  const loadRows = () => {
+    if (!docId) {
+      setRows([]);
+      return Promise.resolve();
+    }
+    return api
+      .reviewQueue(docId, 0, 50, tab)
       .then((r) => setRows(r.content || []))
       .catch((e) => setError(e.message));
-  }, [docId]);
+  };
+
+  useEffect(() => {
+    loadRows();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docId, tab]);
 
   const refresh = () => {
     loadDocs().catch(() => {});
-    if (docId) api.reviewQueue(docId, 0, 50).then((r) => setRows(r.content || [])).catch(() => {});
+    loadRows().catch(() => {});
   };
 
   const doUpload = async () => {
@@ -66,6 +77,72 @@ export default function ReviewQueue({ onToast }) {
     }
   };
 
+  const clearUndo = () => {
+    if (undoTimer.current) {
+      clearTimeout(undoTimer.current);
+      undoTimer.current = null;
+    }
+  };
+
+  /** Reject, then offer a 30s Ctrl+Z / Undo for the row we just rejected. */
+  const rejectRow = async (r) => {
+    setError("");
+    try {
+      await api.reject(r.id);
+      onToast(`Rejected "${r.fieldName}" — press Ctrl+Z to undo`);
+      clearUndo();
+      setLastRejected({ id: r.id, name: r.fieldName });
+      undoTimer.current = setTimeout(() => setLastRejected(null), 30000);
+      refresh();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const undoReject = async () => {
+    if (!lastRejected) return;
+    setError("");
+    try {
+      await api.reopen(lastRejected.id);
+      onToast(`Restored "${lastRejected.name}"`);
+      clearUndo();
+      setLastRejected(null);
+      refresh();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const restoreRow = async (r) => {
+    setError("");
+    try {
+      await api.reopen(r.id);
+      onToast(`Restored "${r.fieldName}"`);
+      refresh();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  useEffect(() => () => clearUndo(), []);
+
+  // Ctrl+Z while the undo is available (ignored when typing in a field so it
+  // doesn't fight the browser's native text undo).
+  useEffect(() => {
+    if (!lastRejected) return;
+    const onKey = (e) => {
+      const t = e.target;
+      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) {
+        e.preventDefault();
+        undoReject();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastRejected]);
+
   const submitCorrection = (row) => {
     const v = edit[row.id];
     if (!v || (v.value === undefined && v.text === undefined && v.category === undefined)) return;
@@ -74,6 +151,9 @@ export default function ReviewQueue({ onToast }) {
       onToast(`Saved as version ${res.version} — old version kept for audit`);
     }, null);
   };
+
+  const myEmail = (me?.email || "").toLowerCase();
+  const canRestore = (r) => canReview && !!r.reviewedBy && r.reviewedBy.toLowerCase() === myEmail;
 
   return (
     <>
@@ -121,11 +201,33 @@ export default function ReviewQueue({ onToast }) {
           Figures awaiting a decision — correct, then approve/publish. Signed in as <b>{role || "…"}</b>.
           {!canReview && " Your role can submit corrections; approval needs a reviewer."}
         </p>
-        <div className="row-btns" style={{ margin: "2px 0 12px" }}>
-          <span className="pill prio-pill critical">Red · human verification required</span>
-          <span className="pill prio-pill review">Yellow · check if unsure</span>
-          <span className="pill prio-pill ok">Green · low risk</span>
+        <div className="tabs" style={{ marginBottom: 8 }}>
+          <button
+            className={"tab" + (tab === "pending_review" ? " active" : "")}
+            onClick={() => setTab("pending_review")}
+          >
+            Pending
+          </button>
+          <button
+            className={"tab" + (tab === "rejected" ? " active" : "")}
+            onClick={() => setTab("rejected")}
+          >
+            Rejected
+          </button>
         </div>
+        {lastRejected && (
+          <div className="undo-bar">
+            Rejected <b>“{lastRejected.name}”</b>
+            <button className="link-btn" onClick={undoReject}>Undo (Ctrl+Z)</button>
+          </div>
+        )}
+        {tab === "pending_review" && (
+          <div className="row-btns" style={{ margin: "2px 0 12px" }}>
+            <span className="pill prio-pill critical">Red · human verification required</span>
+            <span className="pill prio-pill review">Yellow · check if unsure</span>
+            <span className="pill prio-pill ok">Green · low risk</span>
+          </div>
+        )}
         <table className="data">
           <thead>
             <tr><th>Field</th><th>Value</th><th>Category</th><th>Period</th><th>Conf.</th><th>Status</th><th>Correct</th><th>Decision</th></tr>
@@ -160,33 +262,50 @@ export default function ReviewQueue({ onToast }) {
                   </div>
                 </td>
                 <td>
-                  <div className="row-btns">
-                    <button
-                      className="btn small"
-                      disabled={!canReview || !pending}
-                      title={!pending ? "Only pending items can be approved" : "Approve"}
-                      onClick={() => act(() => api.approve(r.id), "Approved")}
-                    >Approve</button>
-                    <button
-                      className="btn small danger"
-                      disabled={!canReview || !pending}
-                      title={!pending ? "Only pending items can be rejected" : "Reject"}
-                      onClick={() => act(() => api.reject(r.id), "Rejected")}
-                    >Reject</button>
-                    <button
-                      className="btn small ghost"
-                      disabled={!canPublish || !approved}
-                      title={!approved ? "Approve first, then publish" : "Publish to dashboard"}
-                      onClick={() => act(() => api.publish(r.id), "Published to dashboard")}
-                    >Publish</button>
-                  </div>
+                  {tab === "rejected" ? (
+                    <div className="row-btns">
+                      <button
+                        className="btn small"
+                        disabled={!canRestore(r)}
+                        title={canRestore(r)
+                          ? "Restore to pending"
+                          : "Only the reviewer who rejected this figure can restore it"}
+                        onClick={() => restoreRow(r)}
+                      >Restore</button>
+                    </div>
+                  ) : (
+                    <div className="row-btns">
+                      <button
+                        className="btn small"
+                        disabled={!canReview || !pending}
+                        title={!pending ? "Only pending items can be approved" : "Approve"}
+                        onClick={() => act(() => api.approve(r.id), "Approved")}
+                      >Approve</button>
+                      <button
+                        className="btn small danger"
+                        disabled={!canReview || !pending}
+                        title={!pending ? "Only pending items can be rejected" : "Reject"}
+                        onClick={() => rejectRow(r)}
+                      >Reject</button>
+                      <button
+                        className="btn small ghost"
+                        disabled={!canPublish || !approved}
+                        title={!approved ? "Approve first, then publish" : "Publish to dashboard"}
+                        onClick={() => act(() => api.publish(r.id), "Published to dashboard")}
+                      >Publish</button>
+                    </div>
+                  )}
                 </td>
               </tr>
               );
             })}
           </tbody>
         </table>
-        {rows.length === 0 && <p className="muted">Nothing awaiting review for this document.</p>}
+        {rows.length === 0 && (
+          <p className="muted">
+            {tab === "rejected" ? "No rejected figures for this document." : "Nothing awaiting review for this document."}
+          </p>
+        )}
       </div>
     </>
   );
