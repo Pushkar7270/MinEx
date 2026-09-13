@@ -103,6 +103,7 @@ export const api = {
   upload: uploadDoc,
   reviewQueue: (docId, page = 0, size = 50, status = "pending_review") =>
     req(`/api/v1/documents/${docId}/review-queue?page=${page}&size=${size}&status=${status}`),
+  rejected: (page = 0, size = 100) => req(`/api/v1/fields/rejected?page=${page}&size=${size}`),
   correct: (id, fieldValue, fieldText, category) =>
     req(`/api/v1/fields/${id}`, {
       method: "PATCH",

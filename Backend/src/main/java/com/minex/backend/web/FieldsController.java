@@ -25,7 +25,7 @@ public class FieldsController {
         this.props = props;
     }
 
-    public record FieldResponse(UUID id, UUID documentId, String category, String period,
+    public record FieldResponse(UUID id, UUID documentId, String documentName, String category, String period,
                                 String fieldName, Double fieldValue, String fieldText, String unit,
                                 double confidenceScore, boolean needsReview, String status, int version,
                                 String priority, String reviewedBy) {
@@ -38,6 +38,7 @@ public class FieldsController {
                     : "ok";
             return new FieldResponse(f.getId(),
                     f.getDocument() == null ? null : f.getDocument().getId(),
+                    f.getDocument() == null ? null : f.getDocument().getOriginalFilename(),
                     f.getCategory() == null ? null : f.getCategory().getName(),
                     f.getPeriod(), f.getFieldName(), f.getFieldValue(), f.getFieldText(),
                     f.getUnit(), f.getConfidenceScore(), f.isNeedsReview(),
@@ -55,6 +56,13 @@ public class FieldsController {
                                            Pageable pageable) {
         return review.reviewQueue(documentId, currentUser.requireCurrentUser(), status, pageable)
                 .map(f -> FieldResponse.of(f, props));
+    }
+
+    /** All rejected figures across every document (newest version per field+period). */
+    @GetMapping("/api/v1/fields/rejected")
+    @PreAuthorize("isAuthenticated()")
+    public Page<FieldResponse> rejected(Pageable pageable) {
+        return review.rejectedQueue(pageable).map(f -> FieldResponse.of(f, props));
     }
 
     @PatchMapping("/api/v1/fields/{id}")

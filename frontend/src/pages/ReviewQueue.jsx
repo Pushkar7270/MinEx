@@ -32,6 +32,13 @@ export default function ReviewQueue({ onToast }) {
   }, []);
 
   const loadRows = () => {
+    // Rejected is a global view across every document; pending is per document.
+    if (tab === "rejected") {
+      return api
+        .rejected(0, 100)
+        .then((r) => setRows(r.content || []))
+        .catch((e) => setError(e.message));
+    }
     if (!docId) {
       setRows([]);
       return Promise.resolve();
@@ -238,7 +245,12 @@ export default function ReviewQueue({ onToast }) {
               const approved = r.status === "approved";
               return (
               <tr key={r.id} className={"prio-" + (r.priority || "review")}>
-                <td>{r.fieldName}</td>
+                <td>
+                  {r.fieldName}
+                  {tab === "rejected" && r.documentName && (
+                    <div className="muted" style={{ fontSize: 11 }}>{r.documentName}</div>
+                  )}
+                </td>
                 <td><b>{r.fieldValue ?? r.fieldText}</b> <span className="muted">{r.unit}</span></td>
                 <td className="muted">{r.category || "—"}</td>
                 <td className="muted">{r.period || "—"}</td>
@@ -303,7 +315,9 @@ export default function ReviewQueue({ onToast }) {
         </table>
         {rows.length === 0 && (
           <p className="muted">
-            {tab === "rejected" ? "No rejected figures for this document." : "Nothing awaiting review for this document."}
+            {tab === "rejected"
+              ? "No rejected figures across any document."
+              : "Nothing awaiting review for this document."}
           </p>
         )}
       </div>

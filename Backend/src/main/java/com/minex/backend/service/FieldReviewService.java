@@ -87,6 +87,26 @@ public class FieldReviewService {
         return reviewQueue(documentId, viewer, "pending_review", pageable);
     }
 
+    /** All rejected figures across every document (newest version per document+field+period). */
+    @Transactional(readOnly = true)
+    public Page<ExtractedField> rejectedQueue(Pageable pageable) {
+        Map<String, ExtractedField> latest = new LinkedHashMap<>();
+        for (ExtractedField f : fields.findByStatus("rejected", Pageable.unpaged()).getContent()) {
+            String key = (f.getDocument() == null ? "" : f.getDocument().getId()) + "\u0000"
+                    + f.getFieldName() + "\u0000" + f.getPeriod();
+            ExtractedField prev = latest.get(key);
+            if (prev == null || isNewer(f, prev)) {
+                latest.put(key, f);
+            }
+        }
+        List<ExtractedField> distinct = new ArrayList<>(latest.values());
+        distinct.sort(Comparator.comparing(ExtractedField::getCreatedAt,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+        int offset = (int) Math.min(pageable.getOffset(), distinct.size());
+        int end = Math.min(offset + pageable.getPageSize(), distinct.size());
+        return new PageImpl<>(distinct.subList(offset, end), pageable, distinct.size());
+    }
+
     /** Version wins; UUID breaks exact ties so the winner is deterministic. */
     private static boolean isNewer(ExtractedField a, ExtractedField b) {
         if (a.getVersion() != b.getVersion()) {
