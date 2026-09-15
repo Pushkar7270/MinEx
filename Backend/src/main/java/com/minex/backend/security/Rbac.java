@@ -39,6 +39,11 @@ public class Rbac {
         return rank() >= props.getRbac().getPublishRank();
     }
 
+    /** May view the audit trail (who changed/approved/rejected/published what). */
+    public boolean canViewAudit() {
+        return rank() >= props.getRbac().getAuditRank();
+    }
+
     /** May change other users' roles. */
     public boolean canManageUsers() {
         return rank() >= props.getRbac().getAdminRank();

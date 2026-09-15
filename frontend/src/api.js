@@ -116,6 +116,14 @@ export const api = {
   listUsers: (page = 0, size = 50) => req(`/api/v1/users?page=${page}&size=${size}`),
   changeRole: (id, role) =>
     req(`/api/v1/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
+  auditLog: (page = 0, size = 50, filters = {}) => {
+    const q = new URLSearchParams({ page, size });
+    if (filters.action) q.set("action", filters.action);
+    if (filters.entityType) q.set("entityType", filters.entityType);
+    if (filters.userId) q.set("userId", filters.userId);
+    return req(`/api/v1/audit?${q.toString()}`);
+  },
+  auditActions: () => req("/api/v1/audit/actions"),
 
   // Phase 2 — RAG chatbot (separate FastAPI service).
   chatQuery: (message, sessionId) =>

@@ -86,6 +86,7 @@ public class AuthController {
         out.put("canCorrect", rank >= props.getRbac().getCorrectRank());
         out.put("canReview", rank >= props.getRbac().getReviewRank());
         out.put("canPublish", rank >= props.getRbac().getPublishRank());
+        out.put("canViewAudit", rank >= props.getRbac().getAuditRank());
         out.put("canManageUsers", rank >= props.getRbac().getAdminRank());
         return out;
     }

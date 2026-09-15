@@ -75,6 +75,7 @@ app:
     correct-rank: ${APP_RBAC_CORRECT_RANK:10}
     review-rank: ${APP_RBAC_REVIEW_RANK:20}
     publish-rank: ${APP_RBAC_PUBLISH_RANK:30}
+    audit-rank: ${APP_RBAC_AUDIT_RANK:40}
     admin-rank: ${APP_RBAC_ADMIN_RANK:100}
 
 logging:

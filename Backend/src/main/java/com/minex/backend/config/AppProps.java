@@ -77,6 +77,8 @@ public class AppProps {
         private int reviewRank = 20;
         /** May publish approved figures to dashboards. */
         private int publishRank = 30;
+        /** May view the audit trail (who uploaded/changed/approved/rejected what). */
+        private int auditRank = 40;
         /** May change other users' roles. */
         private int adminRank = 100;
     }

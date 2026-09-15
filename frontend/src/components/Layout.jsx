@@ -46,6 +46,11 @@ export default function Layout({ onToast }) {
         <NavLink to="/chat" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
           <span>✦</span> AI Chat
         </NavLink>
+        {profile.canViewAudit && (
+          <NavLink to="/audit" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
+            <span>🕘</span> Audit Log
+          </NavLink>
+        )}
         <NavLink to="/drafts" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
           <span>📄</span> Drafts <span className="soon-badge">Soon</span>
         </NavLink>

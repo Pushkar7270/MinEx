@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
 
 export default function ReviewQueue({ onToast }) {
@@ -14,7 +14,6 @@ export default function ReviewQueue({ onToast }) {
   const [file, setFile] = useState(null);
   const [edit, setEdit] = useState({});
   const [lastRejected, setLastRejected] = useState(null);
-  const undoTimer = useRef(null);
 
   useEffect(() => {
     api.me().then(setMe).catch(() => {});
@@ -84,22 +83,13 @@ export default function ReviewQueue({ onToast }) {
     }
   };
 
-  const clearUndo = () => {
-    if (undoTimer.current) {
-      clearTimeout(undoTimer.current);
-      undoTimer.current = null;
-    }
-  };
-
-  /** Reject, then offer a 30s Ctrl+Z / Undo for the row we just rejected. */
+  /** Reject, then offer a Ctrl+Z / Undo for the row we just rejected. */
   const rejectRow = async (r) => {
     setError("");
     try {
       await api.reject(r.id);
       onToast(`Rejected "${r.fieldName}" — press Ctrl+Z to undo`);
-      clearUndo();
       setLastRejected({ id: r.id, name: r.fieldName });
-      undoTimer.current = setTimeout(() => setLastRejected(null), 30000);
       refresh();
     } catch (e) {
       setError(e.message);
@@ -112,7 +102,6 @@ export default function ReviewQueue({ onToast }) {
     try {
       await api.reopen(lastRejected.id);
       onToast(`Restored "${lastRejected.name}"`);
-      clearUndo();
       setLastRejected(null);
       refresh();
     } catch (e) {
@@ -130,8 +119,6 @@ export default function ReviewQueue({ onToast }) {
       setError(e.message);
     }
   };
-
-  useEffect(() => () => clearUndo(), []);
 
   // Ctrl+Z while the undo is available (ignored when typing in a field so it
   // doesn't fight the browser's native text undo).

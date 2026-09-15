@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import ReviewQueue from "./pages/ReviewQueue";
+import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
 import OAuthCallback from "./pages/OAuthCallback";
 import Welcome from "./pages/Welcome";
@@ -44,6 +45,7 @@ export default function App() {
         >
           <Route path="/" element={<Dashboard />} />
           <Route path="/review" element={<ReviewQueue onToast={showToast} />} />
+          <Route path="/audit" element={<AuditLog />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/drafts" element={<DraftsSoon onToast={showToast} />} />
         </Route>
