@@ -39,7 +39,7 @@ export default function Login() {
     <div className="app-shell" style={{ gridTemplateColumns: "1fr" }}>
       <div className="card form-card">
         <div className="brand">
-          <span className="brand-mark">M</span> MinEx IntelliReport
+          <span className="brand-mark">M</span> MinEx
         </div>
         <h3>Sign in</h3>
         <p className="sub">There are placeholder logins for demo testing</p>

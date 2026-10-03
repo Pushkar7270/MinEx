@@ -36,14 +36,3 @@ export function ChatSoon(props) {
     />
   );
 }
-
-export function DraftsSoon(props) {
-  return (
-    <ComingSoon
-      phase="Phase 3"
-      title="Parliamentary draft auto-responder"
-      blurb="Auto-fill official Ministry/Parliamentary templates from the same approved dataset. PDF + editable Word export, Manager approval before dispatch."
-      {...props}
-    />
-  );
-}
