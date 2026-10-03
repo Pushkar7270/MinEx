@@ -147,10 +147,6 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="card">
-          <h3>Decisions Powered by Data</h3>
-          <p className="sub">
-            Move beyond guesswork with verified mining figures tailored to your role.
-          </p>
           <button className="btn" onClick={() => navigate("/review")}>
             Open Review Queue
           </button>
@@ -239,7 +235,7 @@ export default function Dashboard() {
           <div className="chart-wrap">
             {chartData.length === 0 ? (
               <p className="muted" style={{ padding: "60px 0", textAlign: "center" }}>
-                No approved figures here yet — approve items in the Review Queue and they will chart here.
+                No approved figures here yet! Approve items in the Review Queue and they will chart here.
               </p>
             ) : (
             <ResponsiveContainer>

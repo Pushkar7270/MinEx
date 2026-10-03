@@ -153,7 +153,7 @@ export default function ReviewQueue({ onToast }) {
     <>
       <div className="card">
         <h3>Upload report</h3>
-        <p className="sub">PDF, Excel, Word, CSV or images — stored and queued for extraction.</p>
+        <p className="sub">Data stored and queued for extraction.</p>
         <div className="doc-bar">
           <div>
             <input type="file" onChange={(e) => setFile(e.target.files[0])} />
@@ -166,12 +166,9 @@ export default function ReviewQueue({ onToast }) {
       </div>
       <div className="card">
         <h3>Documents</h3>
-        <p className="sub">All uploaded reports and their processing status — review is team work.</p>
         {docs.length === 0 && (
           <p className="muted">
-            Nothing here yet. Upload a report above — once it is processed,
-            its figures appear here for the whole team to review.
-          </p>
+            Nothing here yet. Upload a report above</p>
         )}
         <table className="data">
           <thead>

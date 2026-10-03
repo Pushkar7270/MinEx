@@ -64,7 +64,6 @@ export default function Chat() {
       <div className="chat-head">
         <div>
           <h3>Ask MinEx AI</h3>
-          <p className="sub">Answers only from approved/published figures, with citations.</p>
         </div>
         <div className="row-btns">
           <button className="btn small ghost" onClick={refreshIndex} title="Rebuild the index from published data (admin)">
@@ -79,7 +78,6 @@ export default function Chat() {
       <div className="chat-log">
         {messages.length === 0 && (
           <div className="chat-empty">
-            <p className="muted">Ask a factual question about verified mining data.</p>
             <div className="row-btns">
               {SUGGESTIONS.map((s) => (
                 <button key={s} className="tab" onClick={() => send(s)}>{s}</button>

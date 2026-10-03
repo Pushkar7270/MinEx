@@ -29,7 +29,7 @@ export default function Welcome({ onToast }) {
     <div className="app-shell" style={{ gridTemplateColumns: "1fr" }}>
       <div className="card form-card">
         <div className="brand">
-          <span className="brand-mark">M</span> MinEx IntelliReport
+          <span className="brand-mark">M</span> MinEx
         </div>
         <h3>Choose your display name</h3>
         <p className="sub">

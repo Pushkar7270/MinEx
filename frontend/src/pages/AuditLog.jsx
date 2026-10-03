@@ -80,10 +80,6 @@ export default function AuditLog() {
   return (
     <div className="card">
       <h3>Audit log</h3>
-      <p className="sub">
-        Every upload, correction, approval, rejection and publication — with who did it and when.
-        Read-only; restricted to managers and admins.
-      </p>
       <div className="tabs" style={{ marginBottom: 8, alignItems: "center" }}>
         <select
           value={action}

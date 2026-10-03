@@ -42,7 +42,7 @@ export default function Login() {
           <span className="brand-mark">M</span> MinEx IntelliReport
         </div>
         <h3>Sign in</h3>
-        <p className="sub">Role-based access — every account has exactly one role.</p>
+        <p className="sub">There are placeholder logins for demo testing</p>
         {google.google ? (
           <button
             className="btn ghost"
@@ -68,7 +68,7 @@ export default function Login() {
         </form>
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 14 }}>
-          <label>Placeholder sign-ins (one per role — click to fill)</label>
+          <label>Placeholder sign-ins : Click once to choose</label>
           <div className="demo-logins">
             {DEMO_ACCOUNTS.map((a) => (
               <button
